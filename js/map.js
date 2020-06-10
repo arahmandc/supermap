@@ -126,9 +126,9 @@ $(function() {
 	
 	function queryCompleted(queryEventArgs){
 		var style = {
-		            strokeColor: "#304DBE",
+		            strokeColor: "#f3ff05",
 		            strokeWidth: 1,
-		            fillColor: "#304DBE",
+		            fillColor: "#f3ff05",
 		            fillOpacity: "0.8"
 		        };
 				var i, j, feature,

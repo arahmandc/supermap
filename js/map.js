@@ -100,7 +100,54 @@ $(function() {
 
 	}
 
-	//crear
+	//house search
+	$("#houseSearch").click(function() {
+		//Clear the earlier query result
+		vectorLayer.removeAllFeatures();
+		//Get value from input
+		var sql = $("#querykey").val().toString();
+		console.log(sql);
+		var queryParam = new SuperMap.REST.FilterParameter({
+			//Set the query layer
+			name: "House@data",
+			attributeFilter: sql //Set query SQL conditions
+		});
+		var queryBySQLParams = new SuperMap.REST.QueryBySQLParameters({
+			queryParams: [queryParam]
+		});
+		var myQueryBySQLService = new SuperMap.REST.QueryBySQLService(url, {
+			eventListeners: {
+				"processCompleted": queryCompleted,
+				"processFailed": queryError
+			}
+		});
+		myQueryBySQLService.processAsync(queryBySQLParams);
+	});
+	
+	function queryCompleted(queryEventArgs){
+		var style = {
+		            strokeColor: "#304DBE",
+		            strokeWidth: 1,
+		            fillColor: "#304DBE",
+		            fillOpacity: "0.8"
+		        };
+				var i, j, feature,
+				            result = queryEventArgs.result;
+				        if (result && result.recordsets) {
+				            for (i = 0; i < result.recordsets.length; i++) {
+				                if (result.recordsets[i].features) {
+				                    for (j = 0; j < result.recordsets[i].features.length; j++) {
+				                        feature = result.recordsets[i].features[j];
+				                        feature.style = style;
+				                        vectorLayer.addFeatures(feature);
+				                    }
+				                }
+				            }
+				        }
+			}
+			function queryError(e){
+				console.log(e);
+			}
 	
 
 

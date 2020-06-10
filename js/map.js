@@ -1,5 +1,5 @@
 var map;
-var url = "192.168.0.103:8090/iserver/services/map-mapWorkspace/rest/maps/myMap";
+var url = "http://192.168.0.103:8090/iserver/services/map-mapWorkspace/rest/maps/myMap";
 
 $(function() {
 			//Frame layout initialization

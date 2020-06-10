@@ -1,5 +1,5 @@
 var map;
-var url = "http://182.54.152.26:8090/iserver/services/map-mapWorkspace/rest/maps/myMap";
+var url = "http://182.54.152.26:58616/iserver/services/map-mapWorkspace/rest/maps/myMap";
 
 $(function() {
 			//Frame layout initialization

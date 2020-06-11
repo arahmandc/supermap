@@ -1,4 +1,4 @@
-var map;
+var map, infowin;
 var url = "http://localhost:8090/iserver/services/map-mapWorkspace/rest/maps/myMap";
 
 $(function() {
@@ -43,7 +43,11 @@ $(function() {
 				});
 			$("#clear").click(function() {
 					vectorLayer.removeAllFeatures();
+					closeInfoWin();
 				});
+			// $("#houseSearch").click(function() {
+			// 	});
+
 
 
 
@@ -148,7 +152,72 @@ $(function() {
 			function queryError(e){
 				console.log(e);
 			}
+
+
 	
+		//Instantiate the selectFeature control. Call onSelect and onUnselect methods
+		//Call onSelect method when the feature is selected. Call onUnselect method when the selected features are canceled
+		var selectFeature = new SuperMap.Control.SelectFeature(vectorLayer, {
+				onSelect: onFeatureSelect,
+				onUnselect: onUnFeatureSelect
+			});
+			//Add control to map
+			map.addControl(selectFeature);
+			//Activate the control
+			selectFeature.activate();
+			// var infowin;
+
+			function onFeatureSelect(e) {
+				console.log(e);
+				closeInfoWin();
+				var feature = e;
+				var center = new SuperMap.LonLat((feature.geometry.bounds.left + 	feature.geometry.bounds.right) / 2, (feature.geometry
+					.bounds.bottom + feature.geometry.bounds.top) / 2);
+					
+				var contentHTML ="<table border='1'>";
+				for(i in feature.attributes){
+					if(i!="SmID" && i != "SmUserID" && i!="SmArea" && i!="SmPerimeter"){
+						contentHTML += "<tr>";
+						contentHTML += "<td>"+i+"</td>";
+						contentHTML += "<td>"+feature.attributes[i]+"</td>";
+						contentHTML += "</tr>";
+					}
+					
+				}
+				contentHTML += "</table>";
+				var icon = new SuperMap.Icon();
+
+				popup = new SuperMap.Popup.Anchored(
+					"chicken",
+					center,
+					new SuperMap.Size(220, 140),
+					contentHTML,
+					icon,
+					true,
+					null
+				);
+
+				infowin = popup;
+				map.addPopup(infowin);
+
+
+			}
+
+	
+			function onUnFeatureSelect(e){
+				console.log(e);
+			}
+
+			function closeInfoWin() {
+				if (infowin) {
+					try {
+						infowin.hide();
+						infowin.destroy();
+					} catch (e) {}
+				}
+			}
+
+
 
 
 

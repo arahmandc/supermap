@@ -1,5 +1,15 @@
-var map, infowin;
+var map, infowin, vectorLayer, markerLayer;
 var url = "http://localhost:8090/iserver/services/map-mapWorkspace/rest/maps/myMap";
+function closeInfoWin() {
+				if (infowin) {
+					try {
+						infowin.hide();
+						infowin.destroy();
+					} catch (e) {}
+				}
+			}
+
+
 
 $(function() {
 			//Frame layout initialization
@@ -21,7 +31,8 @@ $(function() {
 					maxResolution: "auto"
 				});
 			//define a layer display features created
-			var vectorLayer = new SuperMap.Layer.Vector("Vector Layer");
+			vectorLayer = new SuperMap.Layer.Vector("Vector Layer");
+			markerLayer = new SuperMap.Layer.Markers("Markers");
 
 			//register a layerInitialized event to layer
 				layer.events.on({
@@ -29,7 +40,7 @@ $(function() {
 				});
 			function addlayer() {
 			//add layer to the map control
-				map.addLayers([layer, vectorLayer]);
+				map.addLayers([layer, vectorLayer, markerLayer]);
 			//set default center point to the map
 				map.setCenter(new SuperMap.LonLat(411531.36, 6181382.98), 1);
 			}

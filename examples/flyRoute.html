@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+    <title>Fly Along Line</title>
+    <link href="../Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+    <link href="./css/bootstrap.min.css" rel="stylesheet">
+    <link href="./css/pretty.css" rel="stylesheet">
+    <script src="./js/jquery.min.js"></script>
+    <script src="./js/bootstrap.min.js"></script>
+    <script src="./js/bootstrap-select.min.js"></script>
+    <script src="./js/config.js"></script>
+    <script type="text/javascript" src="./js/require.min.js" data-main="js/main"></script>
+    <style>
+        #play {
+            content: url(./images/play.png);
+            height: 30px;
+            padding: 5px;
+        }
+
+        #pause {
+            content: url(./images/pause.png);
+            height: 30px;
+            padding: 5px;
+        }
+
+        #stop {
+            content: url(./images/stop.png);
+            height: 30px;
+            padding: 5px;
+        }
+
+        .bootstrap-select {
+            width: 150px;
+        }
+    </style>
+</head>
+<body>
+<div id="cesiumContainer"></div>
+<div id='loadingbar' class="spinner">
+    <div class="spinner-container container1">
+        <div class="circle1"></div>
+        <div class="circle2"></div>
+        <div class="circle3"></div>
+        <div class="circle4"></div>
+    </div>
+    <div class="spinner-container container2">
+        <div class="circle1"></div>
+        <div class="circle2"></div>
+        <div class="circle3"></div>
+        <div class="circle4"></div>
+    </div>
+    <div class="spinner-container container3">
+        <div class="circle1"></div>
+        <div class="circle2"></div>
+        <div class="circle3"></div>
+        <div class="circle4"></div>
+    </div>
+</div>
+<div id='toolbar' class="param-container tool-bar">
+    <button type="button" id="play" class="button black">Play</button>
+    <button type="button" id="pause" class="button black">Pause</button>
+    <button type="button" id="stop" class="button black">Stop</button>
+    <div style="width: 150px;">
+        <select id="stopList" class="form-control" style="width: 100%;">
+            <!--<option disabled selected value>&#45;&#45;选择站点&#45;&#45;</option>-->
+        </select>
+    </div>
+    <div class="checkbox">
+        <label>
+            <input type="checkbox" id="show-line" checked> Show flight route
+        </label>
+    </div>
+    <div class="checkbox">
+        <label>
+            <input type="checkbox" id="show-stop" checked> Display flight site
+        </label>
+    </div>
+</div>
+<script>
+    //Please check this flight example while online.
+    var flyManager;
+    function onload(Cesium) {
+        var toolbar = document.getElementById('toolbar');
+        var viewer = new Cesium.Viewer('cesiumContainer');
+        viewer.imageryLayers.addImageryProvider(new Cesium.BingMapsImageryProvider({
+            url: 'https://dev.virtualearth.net',
+            mapStyle: Cesium.BingMapsStyle.AERIAL,
+            key: URL_CONFIG.BING_MAP_KEY
+        }));
+        var scene = viewer.scene;
+        scene.globe.depthTestAgainstTerrain = false;
+        var camera = scene.camera;
+        //add S3M layer
+        var promise = scene.open(URL_CONFIG.SCENE_NIAOCHAO);
+        promise.then(function (layers) {
+            camera.setView({
+                destination: Cesium.Cartesian3.fromDegrees(116.3801, 39.9874, 12.0),
+                orientation: {
+                    heading: 6.260995919619558,
+                    pitch: 0,
+                    roll: 0
+                }
+            });
+            var routes = new Cesium.RouteCollection(viewer.entities);
+            //add fpf file，fpf was created in SuperMap iDesktop
+            var fpfUrl = './SampleData/fpf/niaocao.fpf';
+            routes.fromFile(fpfUrl);
+            //Initializing the fly manager
+            var flyManager = new Cesium.FlyManager({
+                scene: scene,
+                routes: routes
+            });
+            //register the arrived event
+            flyManager.stopArrived.addEventListener(function (routeStop) {
+                routeStop.waitTime = 1; // Stay at each site for 1s
+            });
+
+            flyManager.readyPromise.then(function () { // Flight route ready
+                var currentRoute = flyManager.currentRoute;
+                currentRoute.isLineVisible = true;
+                currentRoute.isStopVisible = true;
+                //Generate a list of all sites in the flight file
+                var allStops = flyManager.getAllRouteStops();
+                var menu = document.getElementById('stopList');
+                for (var i = 0, j = allStops.length; i < j; i++) {
+                    var option = document.createElement('option');
+                    option.innerHTML = "Site " + (i + 1);
+                    option.value = allStops[i].index;
+                    menu.appendChild(option);
+                }
+
+                $('#stopList').change(function () { //Register site switch event
+                    flyManager && flyManager.stop();
+                    var index = parseInt($(this).val()); // Site index
+                    var route = flyManager.currentRoute;
+                    var stop = route.get(index);
+                    flyManager.currentStopIndex = index;
+                    flyManager.viewToStop(stop);
+                });
+
+                $('#play').click(function () {
+                    flyManager && flyManager.play();
+                });
+                $('#pause').click(function () {
+                    flyManager && flyManager.pause();
+                });
+                $('#stop').click(function () {
+                    flyManager && flyManager.stop();
+                });
+
+                $('#show-line').change(function(){
+                    currentRoute.isLineVisible = $(this).prop('checked');
+                });
+
+                $('#show-stop').change(function(){
+                    currentRoute.isStopVisible = $(this).prop('checked');
+                });
+
+                $('#toolbar').show();
+                $('#loadingbar').remove();
+            });
+        });
+    }
+</script>
+</body>
+</html>

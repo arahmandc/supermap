@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
+	<title>Oblique photogrammtric model attribute query</title>
+	<link rel="shortcut icon" type="image/x-icon" href="../../web/img/favicon.ico"/>
+	<script type="text/javascript" include="jquery,bootstrap,template,admin-lte,jquery.scrollto,lazyload"
+			src="../js/include-web.js" from="doc"></script>
+	<link rel="stylesheet" href="../css/common.css"/>
+	<link rel="stylesheet" href="../css/examples.css"/>
+	<link rel="stylesheet" href="../css/header.css"/>
+	<link rel='stylesheet' href='../css/sm-extend.css'/>
+	<link rel='stylesheet' href='../css/sm-doc.css'/>
+</head>
+    <body data-spy="scroll" data-target=".subnav" data-offset="50">
+        <!--导航条-->
+        <div class="navbar navbar-fixed-top" id="navbar">
+        </div>
+        <br>
+        <div id='container' class='container'>
+            <div class='page-header'>
+                <h1>Oblique photogrammetric model singularization and attribute query operation manual</h1>
+                <hr/>
+                <h2>Overview<a name="Summary"> </a></h2>
+				<p>The oblique photogrammtric model is often referred to as a "one skin" model. In order to exert the application value of the oblique photogrammetric model, the oblique photogrammetric model must be singulated. Hypergraph 3D takes the lead in singularizing the oblique photogrammetric model by means of the model superimposition vector region. This method is simple in operation, and stores various attribute information of the business in the attribute table of the vector region data to realize singulation. Ability to perform attribute query on oblique photogrammetric model. </p>
+<p>At present, SuperMap iClient3D for WebGL provides a number of demonstration programs, and the "oblique photogrammetric attribute query" example demonstrates the effect of oblique photogrammetric model to achieve singular selection and attribute query.</p>
+ <div class="pageImage"><img src="../images/TopicDOC/AttributeQueryofObliqueModel_Demo.jpg" style="width:80%"><br>
+		 	  Figure： Oblique photogrammetric attribute query example effect</div>
+<p>This document will guide users how to use their oblique photogrammetric model to implement attribute query on the WebGL client according to the effect of the example. The main flow of this operation is as follows:</p>
+				<ol>
+					<ol>
+					  <li><a href="#01PrepareData">Prepare Data</a></li>
+					  <li><a href="#02Monomer">Model Singularization</a></li>
+					  <li><a href="#03CreatS3M">Generate S3M Data</a></li>
+					  <li><a href="#04Publish3DService">Publish 3D services and Data services</a></li>
+					  <li><a href="#05BrowseOblique">Client browsing and attribute query</a></li>
+				  </ol>
+			  </ol>
+				<h2>Operating Procedures</h2>
+				<h3><a name="01PrepareData"></a>1.Data Preparation</h3>
+				<p>The necessary data includes:</p>
+					<ul>
+						<ul>
+						  <li>1<strong>Oblique photogrammetric model data</strong>: such as the oblique photogrammetric model and configuration file (*.scp) in *.osgb format, if there is no configuration file, please refer to "Loading oblique photogrammetric model operation manual" The first step is to generate an SCP configuration file. </li>
+						  <li>2<strong>Two-dimensional vector region data</strong>: The vector region data is matched with the oblique photogrammetric model position, and the attribute table of the vector region data is improved; the vector region data is stored in the file datasource (*.udb). </li>
+					  </ul>
+					</ul>
+				<p>For the demonstration, the author made a modified vector region data whose properties are structured as shown below, where the "<strong>Name/Name</strong>" and "<strong>Des/Description</strong>" fields Is the business field of this example that will be used for attribute queries. </p>
+				<div class="pageImage"><img src="../images/TopicDOC/AttributeQueryofObliqueModel_AttributeStructure.png"><br>
+		 	  Figure: Attribute structure of the vector polygon attribute table</div>
+			  <p>Select the dataset in the Workspace Manager and open its property sheet. Click <strong>Property Structure</strong> in the Edit tab of the ribbon's Property Sheet tab to view and modify it. The attribute structure of the data, and add attribute fields to the vector data according to business requirements, and improve the attribute values.</p>
+			  <p>In order to be able to display images when the model is selected as in the example, optionally prepare the image resource (*.jpg) and store the image resource in the "<strong>%WebGLProducts%\examples\images</strong>" folder. under. The name of the image is the same as the value of the <strong>Name/Name</strong> field of the vector polygon property sheet.</p>
+				<h3><a name="02Monomer"></a>2. Model Singularization</h3>
+				<h4>Instructions</h4>
+				<br>
+				<p>Through the singularization of the model, it is equivalent to the vector plane data matching the position of the "bundled" position of the oblique photogrammetric model.</p>
+				<h4>Steps:</h4>
+				<p>(1). Open the <strong>file-type data source (*.udb)</strong> that holds the vector-side data in the Workspace Manager and Data Sources;</p>
+				<p>(2) Click the <strong>Model Singulation</strong> button on the "OSGB" tab of the SuperMap iDesktop desktop product, as shown below. </p>
+				 <div class="pageImage"><img src="../images/TopicDOC/AttributeQueryofObliqueModel_MonomerPosition.png"><br>
+		 	  Figure: Click on the "Model Singulation" function</div>
+				<p>(3).	The model singulation dialog box is displayed, as shown in the following figure.</p>
+			  <div class="pageImage"><img src="../images/TopicDOC/AttributeQueryofObliqueModel_MonomerDialog.png"><br>
+		 	  Figure: Model Singularization Dialog</div>
+
+				<p>Fill in the oblique photogrammetric model configuration file (*.scp) storage path in the <strong>oblique photogrammetric data</strong> dialog, click the icon button on the right to select the file path, or enter it directly in the text box.</p>
+				<p>(5). In the <strong>Association Settings</strong> of the dialog box, you can set the data source, dataset and associated fields where the vector data is located, as follows:</p>
+					<ul>
+						<ul style="list-style-type:disc;">
+						  <li><strong>Datasource</strong>: The datasource where the vector polygon data matches the oblique photogrammetric model. Select the datasource that the current workspace opens. </li>
+						  <li><strong>Dataset</strong>: The dataset in which the vector polygon data matches the oblique photogrammetric model. </li>
+					  </ul>
+					</ul>
+				<p>(6).	Fill in the singulated target file storage path in the <strong>Target Path</strong> of the dialog box, click the icon button on the right to select the file path, or enter it directly in the text box. </p>
+				<p>(7).	After setting the above parameters, click the "OK" button and wait for the processing to complete.</p>
+				<h4>Result</h4>
+				<p>After the operation is completed, a *.scp file and multiple folders with models are generated in the target path. The directory structure and the number and name of the files are the same as the original files. To verify the singulation effect, add the singularized model to the spherical scene in SuperMap iDesktop by adding the OSGB Cache Layer. Locate the layer and click on a house model in the scene. The model is highlighted, and it can be seen that the singulation process is successful.</p>
+				<div class="pageImage"><img src="../images/TopicDOC/AttributeQueryofObliqueModel_MonomerResult.jpg" style="width:90%"><br>
+		 	  Figure: Click on the singular oblique photogrammetric model highlighting </div>
+				<h3><a name="03CreatS3M"></a>3.Generate S3M data</h3>
+				<h4>Instructions</h4>
+				<p>In order to improve the efficiency of WebGL client parsing and browsing, in this step, the OSG format tilt photography model is converted into S3M format 3D slice buffer, and the SuperMap iDesktop desktop product is used to provide the "Generate S3M Data" function button.</p>
+				<h4>Steps</h4>
+				<p>(1).Open SuperMap iDesktop and click <strong>Generate S3M Data</strong> in the "<strong>Scene Photography</strong>" tab "<strong>WebGL Client</strong>" group. >" button. </p>
+				<div class="pageImage"><img src="../images/TopicDOC/ClickCreatS3M.png" width="564" height="141"><br>
+		 	  Figure: Click on the "Generate S3M Data" tool</div>
+			  <p>(2). The "<strong>OSGB-&gt;S3M</strong>" dialog box pops up, as shown below. </p>
+				<div class="pageImage"><img src="../images/TopicDOC/LoadOblique_OSGB2S3MDialog.png" width="396" height="158"><br>
+		 	  Figure: "OSGB-&gt;S3M" dialog</div>
+			  <p>(3). Fill in the path of the scp configuration file in the <strong>Oblique Photogrammetric Data</strong> dialog box. </p>
+				<p>(4). Fill in the path of the converted target file in the <strong>Destination Path</strong> of the dialog box. </p>
+				<p>(5). There are three options for <strong>Common PC device, Android series device, IOS series device</strong> in the <strong>Compression type</strong> of the dialog box. Please use according to the usage. Terminal selection. </p>
+				<p>(6). After setting the above parameters, click the <strong>OK</strong> button and wait for the conversion to complete. </p>
+				<h4>Result</h4><br>
+				<p>The result of the "Generate S3M Data" operation is as shown on the right side of the figure. This step generates a target folder that is consistent with the original file structure. Open any model folder separately and you can see the OSGB format model and the S3M format model. Correspondence relationship, as shown below. </p>
+				<p>It is worth noting that after generating the 3D slice buffer in S3M format, the amount of model data is greatly reduced. </p>
+				<div class="pageImage"><img src="../images/TopicDOC/LoadOblique_OSGB2S3MResult.png"><br>
+		 	  Figure: Generate S3M data results (right) and model correspondence</div>
+				<h3><a name="04Publish3DService"></a>4. Publish 3D services and data services</h3>
+				<h4>Instructions</h4>
+				<h4>Instructions</h4>
+				<br>
+				<p>In this step, the oblique photogrammetric model of the S3M format is distributed to a local or remote server in the form of a three-dimensional service to realize web network resource sharing, and a data service is also released for attribute query.</p>
+				<h4>Steps</h4><br>
+				<p>(1). In the “Workspace Manager” of SuperMap iDesktop desktop product, right click “Open File Datasource” in “Data Source” to open the datasource with <strong>Vector Region Data ( *.udb)</strong>; </p>
+				<p>(2). Create a new spherical scene, select "<strong>Normal Layer</strong>" under "<strong>Layer Manager</strong>", right click "<strong>Add OSGB Cache" Layer</strong>, select the *.scp configuration file generated by the "Generate S3M Data" operation. </p>
+				<div class="pageImage"><img src="../images/TopicDOC/AddOSGBLayer.png" width="280" height="247"><br>
+		 	  Figure: Add OSGB cache to the scene</div>
+			  <p>(3). After loading the data, locate the layer and set the appropriate viewing angle to save the scene and workspace. After saving, you must close the current workspace, which may cause subsequent service publishing to fail. </p>
+				<p>(4). Start the SuperMap iServer service: In the <strong>%SuperMap iServer_HOME%/bin </strong> directory, click the "<strong>startup.bat</strong>" batch file to start the service. </p>
+				<p>(5). Open your browser and enter <a href="http://localhost:8090/iserver/manager">http://localhost:8090/iserver/manager</a> in the address bar to enter "< Strong>Service Management</strong> page, click <strong>Quickly publish one or a group of services</strong> button under <strong>Homepage</strong>. </p>
+				<div class="pageImage"><img src="../images/TopicDOC/PublishQuickly.png"><br>
+		 	  Figure: Quickly publish a service or a group of services</div>
+			  <p>(6). Pop up the "<strong>Quick Publishing Service</strong><strong>-Select Published Datasources</strong>" dialog and select "<strong>Datasource</strong>" "<strong>Workspace</strong>", click "<strong>Next</strong>". </p>
+				<div class="pageImage"><img src="../images/TopicDOC/DataSource.png" width="509" height="231"><br>
+		 	  Figure: Datasource Selection Workspace</div>
+			  <p>(7). Pop up the <strong>Quick Publishing Service</strong><strong>-</strong><strong>Configure Data</strong> dialog box and click <strong>Remote Browsing</strong> > "The button selects the saved workspace as described above and clicks "<strong>Next</strong>". </p>
+				<div class="pageImage"><img src="../images/TopicDOC/LoadOblique_SelectWorkspace.png" width="723" height="277"><br>
+		 	  Figure: Select workspace configuration data</div>
+			  <p>(8). Pop up the "<strong>Quick Publishing Service - Select Published Service Type</strong>" dialog box, check "<strong>REST-Data Service</strong>" and "<strong>REST" - 3D service</strong> ", click "<strong>Next</strong>". </p>
+				<div class="pageImage"><img src="../images/TopicDOC/AttributeQueryofObliqueModel_Select3D&DataService.png" width="516" height="269"><br>
+		 	  Figure: Checking 3D services and data services</div>
+			    <p>At this point, the service release has been configured, click the "Finish" and "Close" buttons as prompted.</p>
+				<h4>Result</h4><br>
+			  <p>After the service is released, the 3D service will be displayed in the service list, as shown in the following figure.</p>
+			  <div class="pageImage"><img src="../images/TopicDOC/AttributeQueryofObliqueModel_PublishServiceResult.png" width="685" height="343"><br>
+		 	  Figure: The newly published service is displayed in the service list</div>
+				<h3><a name="05BrowseOblique"></a>5. Client browsing and attribute query</h3>
+				<h4>Instructions</h4><br>
+				<p>After the 3D service is released, the terrain data can be viewed through the WebGL client in this step.</p>
+				<p class="STYLE2">Tip: Store the WebGL product package in the <strong> %SuperMap iServer_HOME%/webapps</strong> directory before proceeding. </p>
+				<h4>操作步骤</h4><br>
+				<p>(1)	Obtain the 3D service url address and click to get it in the following order:</p>
+				<ul>
+                  <ul style="list-style-type:disc;">
+                    <li>Go to the service list page (<a target="_blank" href="http://localhost:8090/iserver/services"><u>http://localhost:8090/iserver/services</u>< /a>), find and click on the <span class="STYLE3">3D service</span> published in the previous step;</li>
+                    <li>Click "<strong>Service Address</strong>" on the "Basic Information" page of the "Service Management" page</li>
+                    <li>Go to the "<strong>Roots</strong>" page and click on "<strong>realspace</strong>";</li>
+                    <li>Go to the <strong>3D Service Root Node</strong><strong>(3D)</strong> page and click on <strong>datas</strong>;</li>
+                    <li>Go to the <strong>3D Data List</strong><strong>(datas)</strong> page and click on <strong>Config</strong>;</li>
+                    <li>Go to the "<strong>3D Data Resources</strong><strong>(data)</strong>" page and click "<strong>Get 3D Data Profile</strong>", as shown below Page, copy the <strong>url</strong><strong>address</strong> of the browser's address bar. </li>
+                  </ul>
+			  </ul>
+			  <div class="pageImage"><img src="../images/TopicDOC/AttributeQueryofObliqueModel_CopyConfig.png"><br>
+		 	  Figure: Copy url address</div>
+				<p>(2) Enter the WebGL product package storage path (<strong>%SuperMap iServer_HOME%/webapps</strong>), under the "examples" folder, open the text <strong>S3MTiles.html</strong> "Example, modify the content of the following figure. </p>
+				
+              <div class="pageImage"><img src="../images/TopicDOC/AttributeQueryofObliqueModel_ModifySample1.png"><br>
+		 	  Figure: Modify the sample parameters </div>
+
+
+                 
+                   <ul>
+					 <ul style="list-style-type:disc;">
+                      <li>Modify <strong>scene.</strong> <strong>addS3MTilesLayerByScp ()</strong> function: Modify the address to a <strong>url</strong><strong>address</strong> that was copied. Change the name. </li>
+                      <li>Modify the <strong>Cesium.Cartesian3.fromDegrees()</strong> function: its parameters are the center point positions of the tilted photographic model, longitude, latitude, and elevation. <strong>Change to</strong><strong>scp</strong><strong>point coordinates in the file</strong> for flight positioning to the tilted photographic model position. </li>
+                    </ul>
+                  </ul>
+
+                <p>(3) Obtain the data service url address and click to get it in the following order: </p>
+				<ul>
+                  <ul style="list-style-type:disc;">
+                    <li>Go to the service list page (<a target="_blank" href="http://localhost:8090/iserver/services"><u>http://localhost:8090/iserver/services</u>< /a>), find and click on the <span class="STYLE3">data service</span> published in the previous step;</li>
+                    <li>Click "<strong>Service Address</strong>" on the "Basic Information" page of the "Service Management" page</li>
+                    <li>Go to the "<strong>Roots</strong>" page and click on "<strong>data</strong>";</li>
+                    <li>Go to the <strong>data service's root node</strong> page and copy the url address of the current page, as shown below:</li>
+                  </ul>
+			  </ul>
+			  <div class="pageImage"><img src="../images/TopicDOC/AttributeQueryofObliqueModel_CopyDataURL.png"><br>
+		 	  Figure: Copy the url address of the "root node of the data service" page</div>
+                <p>(4) In the "<strong>S3MTiles.html</strong>" example, set the property query parameters, that is, modify the layer.setQueryParameter() section, as shown below: </p>
+				 <div class="pageImage"><img src="../images/TopicDOC/AttributeQueryofObliqueModel_ModifySample2.png"><br>
+		 	  Figure: Modify the sample attribute query parameters</div>
+			  <ul>
+			  	<ul style="list-style-type:disc;">
+			  	  <li>Where url is the address of the data service, and the url address of the "data node" of the data service is pasted;</li>
+			  	  <li>dataSourceName is the name of the datasource;</li>
+			  	  <li>dataSetName is the name of the vector polygon dataset;</li>
+			  	  <li>keyWord is a query keyword and can be set to the "SmID" field.</li>
+		  	    </ul>
+			  </ul>
+                <p>(5) After the example is modified, open the <strong>S3MTiles</strong>.html page in localhost mode. The browser input address is: <u>http://localhost:8090/%WebGL package%/examples/S3MTiles. Html</u></p>
+                <h4>Result</h4><br>
+				<p>After opening the webpage, the camera flies to the position where the oblique photography model is located, clicks on any model, the model is highlighted and the pop-up window displays the properties. The effect is as follows:</p>
+				<div class="pageImage"><img src="../images/TopicDOC/AttributeQueryofObliqueModel_BrowseResult.jpg"><br>
+			  Figure: Attribute query rendering on a oblique photogrammetric model</div>
+			  <h2>Summary</h2>
+			  <p>Throughout the operational process, the following key points are for reference and understanding:</p>
+			  <ul  style="list-style-type:disc;">
+			  	<li>In the first step of data preparation, the content of the attribute table of the vector region data is improved according to the business requirement, as the database of the attribute query;</li>
+				<li>"Model Singulation" processing before the "Generate S3M Data" operation;</li>
+				<li>When the workspace is created before the service is published, the workspace must include a datasource of the vector face for publishing the data service of the attribute query;</li>
+				<li>Select "REST-3D Service" and "REST-Data Service" when publishing the service, where 3D service is used for model browsing and data service is used for attribute query;</li>
+				<li>The example "S3MTiles.html" mainly modifies the following:
+					<ul>
+						<li><a href="../../Build/Documentation/Scene.html#addS3MTilesLayerByScp">scene.addS3MTilesLayerByScp()</a> function: Add S3MTileslayer to the scene in SCP cache, copy here The configuration file address of the 3D service;</li>
+						<li>Cesium.Cartesian3.fromDegrees() function: Modify the longitude, latitude and elevation parameters respectively for flight positioning to the position of the oblique photogrammetric model;</li>
+						<li><a href="../../Build/Documentation/S3MTilesLayer.html#setQueryParameter">layer.setQueryParameter()</a> function: Set property query parameters, including data service address, data source name, Data set name, query key field. </li>
+					</ul>
+				</li>
+			</ul>
+</div>
+		<!--法律申明-->
+		<div class='footer'>
+		<p>copyright&nbsp;&copy; 2000-2017. &nbsp;Beijing SuperMap Software Co., Ltd reserved</p>
+		</div>
+	</div>
+
+        <script src='../js/jquery.min.js'></script>
+        <script src='../js/bootstrap.js'></script>
+        <script>
+			window.onstop = function(){
+				alert(1);
+			}
+		</script>
+        <script src="../js/navbar.js"></script>
+    </body>
+</html>

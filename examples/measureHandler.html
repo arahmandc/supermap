@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+    <title>Measure</title>
+    <link href="../Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+    <link href="./css/bootstrap.min.css" rel="stylesheet">
+    <link href="./css/pretty.css" rel="stylesheet">
+    <script src="./js/jquery.min.js"></script>
+    <script src="./js/bootstrap.min.js"></script>
+    <script src="./js/bootstrap-select.min.js"></script>
+    <script src="./js/config.js"></script>
+    <script type="text/javascript" src="./js/require.min.js" data-main="js/main"></script>
+</head>
+<body>
+<div id="cesiumContainer"></div>
+<div id='loadingbar' class="spinner">
+    <div class="spinner-container container1">
+        <div class="circle1"></div>
+        <div class="circle2"></div>
+        <div class="circle3"></div>
+        <div class="circle4"></div>
+    </div>
+    <div class="spinner-container container2">
+        <div class="circle1"></div>
+        <div class="circle2"></div>
+        <div class="circle3"></div>
+        <div class="circle4"></div>
+    </div>
+    <div class="spinner-container container3">
+        <div class="circle1"></div>
+        <div class="circle2"></div>
+        <div class="circle3"></div>
+        <div class="circle4"></div>
+    </div>
+</div>
+<div id="toolbar" class="param-container tool-bar">
+    <button type="button" id="distance" class="button black">Distance</button>
+    <button type="button" id="area" class="button black">Area</button>
+    <button type="button" id="height" class="button black">Height</button>
+    <button type="button" id="clear" class="button black">Clear</button>
+    <div style="width: 120px;">
+        <select id="selOpt" class="selectpicker show-tick form-control">
+            <option selected value="1">Space measurement</option>
+            <option value="2">Sticking to the ground</option>
+        </select>
+    </div>
+
+</div>
+<script type="text/javascript">
+    function onload(Cesium) {
+        var viewer = new Cesium.Viewer('cesiumContainer',{
+            //Create an instance of the terrain service provider, url is the TIN terrain service published by SuperMap iServer
+            terrainProvider : new Cesium.CesiumTerrainProvider({
+                url : URL_CONFIG.ZF_TERRAIN,
+                isSct : true//Terrain service originated from SuperMap iServer release, you need to set isSct to true
+            })
+        });
+        //Add image service published by SuperMap iServer
+        viewer.imageryLayers.addImageryProvider(new Cesium.SuperMapImageryProvider({
+            url : URL_CONFIG.ZF_IMG
+        }));
+        var clampMode = 0;
+        var scene = viewer.scene;
+        var widget = viewer.cesiumWidget;
+        var handlerDis,handlerArea,handlerHeight;
+        //set camera view
+        viewer.scene.camera.setView({
+            destination : new Cesium.Cartesian3(-1206939.1925299785, 5337998.241228442, 3286279.2424502545),
+            orientation : {
+                heading : 1.4059101895600987,
+                pitch : -0.20917672793046682,
+                roll : 2.708944180085382e-13
+            }
+        });
+
+        //Initialize measurement distance
+        handlerDis = new Cesium.MeasureHandler(viewer,Cesium.MeasureMode.Distance,0);
+        //Registered ranging function event
+        handlerDis.measureEvt.addEventListener(function(result){
+            var dis = Number(result.distance);
+            var distance = dis > 1000 ? (dis/1000).toFixed(2) + 'km' : dis.toFixed(2) + 'm';
+            handlerDis.disLabel.text = 'distance:' + distance;
+            
+        });
+        handlerDis.activeEvt.addEventListener(function(isActive){
+            if(isActive == true){
+                viewer.enableCursorStyle = false;
+                viewer._element.style.cursor = '';
+                $('body').removeClass('measureCur').addClass('measureCur');
+            }
+            else{
+                viewer.enableCursorStyle = true;
+                $('body').removeClass('measureCur');
+            }
+        });
+
+        //Measuring area
+        handlerArea = new Cesium.MeasureHandler(viewer,Cesium.MeasureMode.Area,0);
+        handlerArea.measureEvt.addEventListener(function(result){
+            var mj = Number(result.area);
+            var area = mj > 1000000 ? (mj/1000000).toFixed(2) + 'km²' : mj.toFixed(2) + '㎡'
+            handlerArea.areaLabel.text = 'area:' + area;
+        });
+        handlerArea.activeEvt.addEventListener(function(isActive){
+            if(isActive == true){
+                viewer.enableCursorStyle = false;
+                viewer._element.style.cursor = '';
+                $('body').removeClass('measureCur').addClass('measureCur');
+            }
+            else{
+                viewer.enableCursorStyle = true;
+                $('body').removeClass('measureCur');
+            }
+        });
+
+        //Measuring height
+        handlerHeight = new Cesium.MeasureHandler(viewer,Cesium.MeasureMode.DVH);
+        handlerHeight.measureEvt.addEventListener(function(result){
+            var distance = result.distance > 1000 ? (result.distance/1000).toFixed(2) + 'km' : result.distance + 'm';
+            var vHeight = result.verticalHeight > 1000 ? (result.verticalHeight/1000).toFixed(2) + 'km' : result.verticalHeight + 'm';
+            var hDistance = result.horizontalDistance > 1000 ? (result.horizontalDistance/1000).toFixed(2) + 'km' : result.horizontalDistance + 'm';
+            handlerHeight.disLabel.text = 'Spatial distance:' + distance;
+            handlerHeight.vLabel.text = 'Vertical height:' + vHeight;
+            handlerHeight.hLabel.text = 'Horizontal distance:' + hDistance;
+        });
+        handlerHeight.activeEvt.addEventListener(function(isActive){
+            if(isActive == true){
+                viewer.enableCursorStyle = false;
+                viewer._element.style.cursor = '';
+                $('body').removeClass('measureCur').addClass('measureCur');
+            }
+            else{
+                viewer.enableCursorStyle = true;
+                $('body').removeClass('measureCur');
+            }
+        });
+
+        $('#distance').click(function(){
+            deactiveAll();
+            handlerDis && handlerDis.activate();
+        });
+
+        $('#area').click(function(){
+            deactiveAll();
+            handlerArea && handlerArea.activate();
+        });
+        $('#height').click(function(){
+            deactiveAll();
+            handlerHeight && handlerHeight.activate();
+        });
+        $('#clear').click(function(){
+            clearAll();
+        });
+
+        $('#selOpt').change(function() {
+            var value = $(this).val();
+            if(value == '1'){
+                clampMode = 0;
+                handlerArea.clampMode = 0;
+                handlerDis.clampMode = 0;
+            }
+            else{
+                clampMode = 1;
+                handlerArea.clampMode = 1;
+                handlerDis.clampMode = 1;
+            }
+        });
+
+
+        if(!scene.pickPositionSupported){
+            alert('Do not support depth textcure, thus mouse interactive drawing is not successful!');
+        }
+
+        function clearAll(){
+            handlerDis  && handlerDis.clear();
+            handlerArea  && handlerArea.clear();
+            handlerHeight && handlerHeight.clear();
+        }
+
+        function deactiveAll(){
+            handlerDis  && handlerDis.deactivate();
+            handlerArea  && handlerArea.deactivate();
+            handlerHeight && handlerHeight.deactivate();
+        }
+
+        $('#loadingbar').remove();
+    }
+</script>
+</body>
+</html>

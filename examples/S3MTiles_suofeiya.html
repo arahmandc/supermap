@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+    <title>Oblique Photogrammetry</title>
+    <link href="../Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+    <link href="./css/pretty.css" rel="stylesheet">
+    <script src="./js/jquery.min.js"></script>
+    <script src="./js/config.js"></script>
+    <script src="./js/slider.js"></script>
+	<script type="text/javascript" src="./js/require.min.js" data-main="js/main"></script>
+    <style>
+        #toolbar input {
+            vertical-align: middle;
+            padding-top: 2px;
+            padding-bottom: 2px;
+            margin: 10px 0px;
+            width:150px;;
+        }
+    </style>
+</head>
+<body>
+<div id="cesiumContainer"></div>
+<div id="toolbar" class="param-container tool-bar">
+    <table>
+        <tbody><tr>
+            <td>brightness</td>
+            <td>
+                <input type="range" min="0" max="1" step="0.02" data-bind="value: brightness, valueUpdate: 'input'">
+            </td>
+        </tr>
+        <tr>
+            <td>Contrast</td>
+            <td>
+                <input type="range" min="0" max="1" step="0.02" data-bind="value: contrast, valueUpdate: 'input'">
+            </td>
+        </tr>
+        <tr>
+            <td>tone</td>
+            <td>
+                <input type="range" min="0" max="1" step="0.02" data-bind="value: hue, valueUpdate: 'input'">
+            </td>
+        </tr>
+        <tr>
+            <td>saturation</td>
+            <td>
+                <input type="range" min="0" max="1" step="0.02" data-bind="value: saturation, valueUpdate: 'input'">
+            </td>
+        </tr>
+        <tr>
+            <td>Gamma</td>
+            <td>
+                <input type="range" min="0" max="1" step="0.02" data-bind="value: gamma, valueUpdate: 'input'">
+            </td>
+        </tr>
+        </tbody></table>
+</div>
+<div id='loadingbar' class="spinner">
+    <div class="spinner-container container1">
+        <div class="circle1"></div>
+        <div class="circle2"></div>
+        <div class="circle3"></div>
+        <div class="circle4"></div>
+    </div>
+    <div class="spinner-container container2">
+        <div class="circle1"></div>
+        <div class="circle2"></div>
+        <div class="circle3"></div>
+        <div class="circle4"></div>
+    </div>
+    <div class="spinner-container container3">
+        <div class="circle1"></div>
+        <div class="circle2"></div>
+        <div class="circle3"></div>
+        <div class="circle4"></div>
+    </div>
+</div>
+<span><img src="./images/hlj.png" style="left: 30px; bottom: 80px;position: absolute;display: block;width: 123px;"></span>
+<script type="text/javascript">
+    function onload(Cesium) {
+        //Initialize the viewer component
+        var viewer = new Cesium.Viewer('cesiumContainer',{
+            imageryProvider: new Cesium.BingMapsImageryProvider({
+                url : 'https://dev.virtualearth.net',
+                mapStyle : Cesium.BingMapsStyle.AERIAL,
+                key : URL_CONFIG.BING_MAP_KEY
+            })
+        });
+        var scene = viewer.scene;
+        var widget = viewer.cesiumWidget;
+        var sceneLayer;
+        $('#loadingbar').remove();
+        
+        try{
+           var promise = scene.addS3MTilesLayerByScp(URL_CONFIG.SCP_SUOFEIYA,{
+                name : 'suofeiya'
+            });
+            Cesium.when(promise,function(layer){
+                sceneLayer = layer;
+                //Set camera position, navigate to model
+                scene.camera.setView({
+                    //Convert the coordinates of longitude, latitude, and altitude to Cartesian coordinates
+                    destination : new Cesium.Cartesian3(-2653915.6463913363,3571045.726807149,4570293.566342328),
+                    orientation : {
+                        heading : 2.1953426301495345,
+                        pitch : -0.33632707158103625,
+                        roll : 6.283185307179586
+                    }
+                });
+            },function(){
+                var title = 'Failed to load SCP. Please check the network connection status or url address is correct?';
+                widget.showErrorPanel(title, undefined, e);
+            });
+        }
+        catch(e){
+            if (widget._showRenderLoopErrors) {
+                var title = 'An error occurred while rendering and the rendering has stopped.';
+                widget.showErrorPanel(title, undefined, e);
+            }
+        }
+        $("#toolbar").show();
+          // The viewModel tracks the state of our mini application.
+        var viewModel = {
+            brightness: 1,
+            contrast: 1,
+            hue: 0,
+            saturation: 1,
+            gamma: 1
+        };
+        // Convert the viewModel members into knockout observables.
+        Cesium.knockout.track(viewModel);
+        // Bind the viewModel to the DOM elements of the UI that call for it.
+        var toolbar = document.getElementById('toolbar');
+        Cesium.knockout.applyBindings(viewModel, toolbar);
+
+        // Make the active imagery layer a subscriber of the viewModel.
+        function subscribeLayerParameter(name) {
+            Cesium.knockout.getObservable(viewModel, name).subscribe(
+                function(newValue) {
+                    var layer = sceneLayer;
+                    layer[name] = parseFloat(newValue);
+                    //sceneLayers[0].refresh();
+                }
+            );
+        }
+        subscribeLayerParameter('brightness');
+        subscribeLayerParameter('contrast');
+        subscribeLayerParameter('hue');
+        subscribeLayerParameter('saturation');
+        subscribeLayerParameter('gamma');
+    }
+    </script>
+</body>
+</html>

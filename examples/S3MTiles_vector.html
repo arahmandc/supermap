@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+    <title>Vector</title>
+    <link href="../Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+    <link href="./css/pretty.css" rel="stylesheet">
+    <script src="./js/jquery.min.js"></script>
+    <script src="./js/config.js"></script>
+	<script type="text/javascript" src="./js/require.min.js" data-main="js/main"></script>
+</head>
+<body>
+<div id="cesiumContainer"></div>
+<div id='loadingbar' class="spinner">
+    <div class="spinner-container container1">
+        <div class="circle1"></div>
+        <div class="circle2"></div>
+        <div class="circle3"></div>
+        <div class="circle4"></div>
+    </div>
+    <div class="spinner-container container2">
+        <div class="circle1"></div>
+        <div class="circle2"></div>
+        <div class="circle3"></div>
+        <div class="circle4"></div>
+    </div>
+    <div class="spinner-container container3">
+        <div class="circle1"></div>
+        <div class="circle2"></div>
+        <div class="circle3"></div>
+        <div class="circle4"></div>
+    </div>
+</div>
+<script type="text/javascript">
+    function onload(Cesium) {
+        //Initialize the viewer component
+        var viewer = new Cesium.Viewer('cesiumContainer',{
+            imageryProvider :  new Cesium.BingMapsImageryProvider({
+                key : URL_CONFIG.BING_MAP_KEY,//go to（https://www.bingmapsportal.com/）for key
+                url : URL_CONFIG.BINGMAP
+            })
+        });
+        var scene = viewer.scene;
+        var widget = viewer.cesiumWidget;
+        $('#loadingbar').remove();
+        try{
+            //Open all layers under the published 3D service
+            var promise = scene.open('http://www.supermapol.com/realspace/services/3D-GuangZhou/rest/realspace');
+            Cesium.when.all(promise,function(layers){
+                //Set the shadow mode of the layer
+                scene.camera.setView({
+                    //Convert the coordinates of longitude, latitude, and altitude to Cartesian coordinates
+                    destination : new Cesium.Cartesian3(-2323607.7945701713,5386182.530303348,2505814.811681112),
+                    orientation : {
+                        heading : 4.844795866469065,
+                        pitch : -0.58125995096984,
+                        roll :1.2504663970958063e-11
+                    }
+                });
+            },function(e){
+                if (widget._showRenderLoopErrors) {
+                    var title = 'Failed to load SCP, please check the network connection status or the URL';
+                    widget.showErrorPanel(title, undefined, e);
+                }
+            });
+        }
+        catch(e){
+            if (widget._showRenderLoopErrors) {
+                var title = 'An error occurred while rendering.  Rendering has stopped.';
+                widget.showErrorPanel(title, undefined, e);
+            }
+        }
+    }
+    </script>
+</body>
+</html>

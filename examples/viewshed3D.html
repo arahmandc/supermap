@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+    <title>Visibility Analysis</title>
+    <link href="../Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+    <link  href="./css/font-awesome.min.css" rel="stylesheet">
+    <link href="./css/bootstrap.min.css" rel="stylesheet">
+    <link href="./css/pretty.css" rel="stylesheet">
+    <link href="./css/style.css" rel="stylesheet">
+    <script type="text/javascript" src="./js/jquery.min.js"></script>
+    <script src="./js/bootstrap.min.js"></script>
+    <script src="./js/bootstrap-select.min.js"></script>
+    <script src="./js/slider.js"></script>
+    <script src="./js/config.js"></script>
+    <script src="./js/tooltip.js"></script>
+    <script src="./js/spectrum.js"></script>
+    <script type="text/javascript" src="./js/require.min.js" data-main="js/main"></script>
+    <style>
+        html,
+        body,
+        #cesiumContainer {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #000000;
+        }
+        input[type=range] {
+            width: 180px;
+        }
+        input[type=text] {
+            width: 50px;
+        }
+        .square{
+            margin-left: 5px;
+            width: 120px;
+            height: 30px;
+            max-width: 150px;
+            display: inline-block;
+        }
+        label{
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+<div id="cesiumContainer"></div>
+<div id='loadingbar' class="spinner">
+    <div class="spinner-container container1">
+        <div class="circle1"></div>
+        <div class="circle2"></div>
+        <div class="circle3"></div>
+        <div class="circle4"></div>
+    </div>
+    <div class="spinner-container container2">
+        <div class="circle1"></div>
+        <div class="circle2"></div>
+        <div class="circle3"></div>
+        <div class="circle4"></div>
+    </div>
+    <div class="spinner-container container3">
+        <div class="circle1"></div>
+        <div class="circle2"></div>
+        <div class="circle3"></div>
+        <div class="circle4"></div>
+    </div>
+</div>
+<div id="toolbar" style="position : absolute; left : 2%; top : 2%; display : none;">
+    <button type="button" id="chooseView" class="button black">Draw viewshed</button>
+    <button type="button" id="clear" class="button black">Clean</button>
+</div>
+<div id="wrapper" style="display:none">
+    <div id="login" class="animate form">
+            <span class="close" aria-hidden="true">×</span>
+        <form> 
+            <h1>Property editing</h1> 
+            <p>
+            <div>
+                <label>Direction (degrees)</label>
+                <input type="range" id="direction" min="0" max="360" step="1.0" title="方向"
+                       data-bind="value: direction, valueUpdate: 'input'">
+                <input type="text" size="5" data-bind="value: direction">
+            </div>
+
+            <div>
+                <label>Flip (degrees)</label>
+                <input type="range" id="pitch" min="-90" max="90" step="1.0" value="1" title="翻转"
+                       data-bind="value: pitch, valueUpdate: 'input'">
+                <input type="text" size="5" data-bind="value: pitch">
+            </div>
+
+            <div>
+                <label>Distance (m)</label>
+                <input type="range" id="distance" min="1" max="500" step="1.0" value="1" title="距离"
+                       data-bind="value: distance, valueUpdate: 'input'">
+                <input type="text" size="5" data-bind="value: distance">
+            </div>
+
+            <div>
+                <label>Horizontal field of view (degrees)</label>
+                <input type="range" id="horizonalFov" min="1" max="120" step="1" value="1" title="水平视场角"
+                       data-bind="value: horizontalFov, valueUpdate: 'input'">
+                <input type="text" size="5" data-bind="value: horizontalFov">
+            </div>
+ 
+            <div>
+                <label>Vertical field of view (degrees)</label>
+                <input type="range" id="verticalFov" min="1" max="90" step="1.0" value="1" title="垂直视场角"
+                       data-bind="value: verticalFov, valueUpdate: 'input'">
+                <input type="text" size="5" data-bind="value: verticalFov">
+            </div>
+            </p>
+            <p>
+                <div class="square">
+                <label>Visible area color</label><input class="colorPicker" data-bind="value: visibleAreaColor,valueUpdate: 'input'"
+                                            id="colorPicker1"/>
+                </div>
+                <div class="square">
+                <label>Invisible area color</label><input class="colorPicker"
+                                             data-bind="value: invisibleAreaColor,valueUpdate: 'input'"
+                                             id="colorPicker2"/>
+                </div>
+            </p>
+            <p><label>The height of the observer in this example: 1.8 m</label></p>
+        </form>
+        </div>
+</div>
+
+<script type="text/javascript">
+    function onload(Cesium) {
+        var viewer = new Cesium.Viewer('cesiumContainer');
+        viewer.imageryLayers.addImageryProvider(new Cesium.BingMapsImageryProvider({
+            url: 'https://dev.virtualearth.net',
+            mapStyle: Cesium.BingMapsStyle.AERIAL,
+            key: URL_CONFIG.BING_MAP_KEY
+        }));
+        var scene = viewer.scene;
+        var viewPosition;
+        $('#loadingbar').remove();
+        $("#toolbar").show();
+        if(!scene.pickPositionSupported){
+            alert('Do not support depth textcure, thus mouse interactive drawing is not successful!');
+        }
+
+        //先将此标记置为true，不激活鼠标移动事件中对可视域分析对象的操作
+        scene.viewFlag = true;
+        var pointHandler = new Cesium.DrawHandler(viewer, Cesium.DrawMode.Point);
+        //创建可视域分析对象
+        var viewshed3D = new Cesium.ViewShed3D(scene);
+        var colorStr1 = viewshed3D.visibleAreaColor.toCssColorString();
+        var colorStr2 = viewshed3D.hiddenAreaColor.toCssColorString();
+        $("#colorPicker1").spectrum({
+            color: colorStr1,
+            showPalette: true,
+            showAlpha: true,
+            localStorageKey: "spectrum.demo",
+            palette: palette
+        });
+        $('#colorPicker2').spectrum({
+            color: colorStr2,
+            showPalette: true,
+            showAlpha: true,
+            localStorageKey: "spectrum.demo",
+            palette: palette
+        });
+        $(".close").click(function(){
+            $("#wrapper").hide();
+        });
+        var widget = viewer.cesiumWidget;
+        try{
+            //Add S3M layer
+            var promise = scene.open(URL_CONFIG.SCENE_CBD);
+            Cesium.when(promise, function (layers) {
+                //Layer loading is complete, set camera position
+                scene.camera.setView({
+                    destination : Cesium.Cartesian3.fromDegrees(116.44366835831197, 39.907137217792666, 48.237028126511696),
+                    orientation : {
+                        heading : 1.6310555040487564,
+                        pitch : 0.0017367269669030794,
+                        roll : 3.007372129104624e-12
+                    }
+                });
+                for (var i = 0; i < layers.length; i++) {
+                    layers[i].selectEnabled = false;
+                }
+            },function(e){
+                if (widget._showRenderLoopErrors) {
+                    var title = 'Failed to load the SCP, please check the network connection or url?';
+                    widget.showErrorPanel(title, undefined, e);
+                }
+            });
+        } catch (e) {
+            if (widget._showRenderLoopErrors) {
+                var title = 'An error occurred while rendering.  Rendering has stopped.';
+                widget.showErrorPanel(title, undefined, e);
+            }
+        }
+        var viewModel = {
+            direction:1.0,
+            pitch : 1.0,
+            distance : 1.0,
+            verticalFov : 1.0,
+            horizontalFov : 1.0,
+            visibleAreaColor : '#ffffffff',
+            invisibleAreaColor : '#ffffffff'
+        };
+        
+        Cesium.knockout.track(viewModel);
+        var toolbar = document.getElementById('wrapper');
+        Cesium.knockout.applyBindings(viewModel, toolbar);
+        Cesium.knockout.getObservable(viewModel,'direction').subscribe(
+            function(newValue) {
+                viewshed3D.direction = parseFloat(newValue);
+                
+            }
+        );
+        Cesium.knockout.getObservable(viewModel,'pitch').subscribe(
+            function(newValue) {
+                viewshed3D.pitch = parseFloat(newValue);
+            }
+        );
+        Cesium.knockout.getObservable(viewModel,'distance').subscribe(
+            function(newValue) {
+                viewshed3D.distance = parseFloat(newValue);
+            }
+        );
+        Cesium.knockout.getObservable(viewModel,'verticalFov').subscribe(
+            function(newValue) {
+                viewshed3D.verticalFov = parseFloat(newValue);
+                
+            }
+        );
+        Cesium.knockout.getObservable(viewModel,'horizontalFov').subscribe(
+            function(newValue) {
+                viewshed3D.horizontalFov = parseFloat(newValue);
+            }
+        );
+        Cesium.knockout.getObservable(viewModel,'visibleAreaColor').subscribe(
+            function(newValue) {
+                var color = Cesium.Color.fromCssColorString(newValue);
+                viewshed3D.visibleAreaColor = color;
+            }
+        );
+        Cesium.knockout.getObservable(viewModel,'invisibleAreaColor').subscribe(
+            function(newValue) {
+                var color = Cesium.Color.fromCssColorString(newValue);
+                viewshed3D.hiddenAreaColor = color;
+            }
+        );
+        var handler = new Cesium.ScreenSpaceEventHandler(scene.canvas);
+        //Mouse movement time callback
+        handler.setInputAction(function(e){
+            //If this flag is false, activate the operation of the visual domain analysis object
+            if (!scene.viewFlag) {
+                //If this flag is false, activate the operation of the visual domain analysis object
+                var position = e.endPosition;
+                var last = scene.pickPosition(position);
+
+                //Calculate the distance between the point and the coordinates of the viewport position
+                var distance = Cesium.Cartesian3.distance(viewPosition, last);
+
+                if(distance > 0 ){
+                    //Convert the current point coordinates of the mouse to latitude and longitude
+                    var cartographic = Cesium.Cartographic.fromCartesian(last);
+                    var longitude = Cesium.Math.toDegrees(cartographic.longitude);
+                    var latitude = Cesium.Math.toDegrees(cartographic.latitude);
+                    var height = cartographic.height;
+
+                    //Set the distance and direction of the object by visual field analysis at this point.
+                    viewshed3D.setDistDirByPoint([longitude, latitude, height]);
+                }
+            }
+        },Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+
+        handler.setInputAction(function(e){
+            //Right mouse button event callback, no longer perform the operation of the visible field in the mouse movement event
+            scene.viewFlag = true;
+            $("#wrapper").show();
+            viewModel.direction = viewshed3D.direction;
+            viewModel.pitch = viewshed3D.pitch;
+            viewModel.distance = viewshed3D.distance;
+            viewModel.horizontalFov = viewshed3D.horizontalFov;
+            viewModel.verticalFov = viewshed3D.verticalFov;
+
+        },Cesium.ScreenSpaceEventType.RIGHT_CLICK);
+
+        document.getElementById("chooseView").onclick = function() {
+            if(pointHandler.active) {
+                return;
+            }
+            //Clear the previous visual domain analysis first
+            viewer.entities.removeAll();
+            viewshed3D.distance = 0.1;
+            scene.viewFlag = true;
+
+            //Activate drawing point class
+            pointHandler.activate();
+        };
+        pointHandler.drawEvt.addEventListener(function (result) {
+            var point = result.object;
+            var position = point.position;
+            viewPosition = position;
+
+            //Convert the position of the acquired point to latitude and longitude
+            var cartographic = Cesium.Cartographic.fromCartesian(position);
+            var longitude = Cesium.Math.toDegrees(cartographic.longitude);
+            var latitude = Cesium.Math.toDegrees(cartographic.latitude);
+            var height = cartographic.height + 1.8;
+            point.position = Cesium.Cartesian3.fromDegrees(longitude, latitude, height);
+
+            if (scene.viewFlag) {
+                // 设置视口位置
+                viewshed3D.viewPosition = [longitude, latitude, height];
+                viewshed3D.build();
+                //Set the flag to false to activate the set visual field operation in the mouse movement callback
+                scene.viewFlag = false;
+            }
+        });
+        $("#clear").on("click", function () {
+            $("#wrapper").hide();
+            viewer.entities.removeAll();
+            viewshed3D.distance = 0.1;
+            scene.viewFlag = true;
+        })
+    }
+</script>
+</body>
+</html>

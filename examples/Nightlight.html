@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+    <title>Image roller blind</title>
+    <link href="../Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+    <link href="./css/pretty.css" rel="stylesheet">
+    <script src="./js/jquery.min.js"></script>
+    <script type="text/javascript" src="./js/require.min.js" data-main="js/main"></script>
+    <script src="./js/config.js"></script>
+</head>
+<body>
+<div id="cesiumContainer">
+    <div id="vertical-slider"></div>
+    <div id="horizontal-slider" style="display: none;"></div>
+</div>
+<div id="tool-bar" class="param-container tool-bar">
+    <div>
+        <span>Rolling shutter mode</span>
+        <div style="padding: 0;margin: 0.5rem 0;">
+            <div style="margin: 0.2rem 0;">
+                <label><input type="checkbox" id="use-roller" style="vertical-align: middle;" checked/><span
+                        style="vertical-align: middle;">Using roller blinds</span></label>
+            </div>
+            <div style="margin: 0.2rem 0;">
+                <label><input type="radio" name="roller-category" value="lr-roller" checked/><span>Left and right roller blinds</span></label>
+                <div style="text-indent: 1rem;" id="lr-roller-mode">
+                    <label><input type="radio" name="roller-mode" value="left-roller" style="vertical-align: middle;"
+                                  checked/><span style="vertical-align: middle;">Shield left</span></label>
+                    <label><input type="radio" name="roller-mode" value="right-roller" style="vertical-align: middle;"/><span
+                            style="vertical-align: middle;">Shield right side</span></label>
+                </div>
+            </div>
+            <div style="margin: 0.2rem 0;">
+                <label><input type="radio" name="roller-category" value="tb-roller"/><span>Roller shutter</span></label>
+                <div style="text-indent: 1rem; display: none;" id="tb-roller-mode">
+                    <label><input type="radio" name="roller-mode" value="top-roller"
+                                  style="vertical-align: middle;"/><span
+                            style="vertical-align: middle;">Shield upper side</span></label>
+                    <label><input type="radio" name="roller-mode" value="bottom-roller"
+                                  style="vertical-align: middle;"/><span
+                            style="vertical-align: middle;">Shielding the underside</span></label>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div id='loadingbar' class="spinner">
+    <div class="spinner-container container1">
+        <div class="circle1"></div>
+        <div class="circle2"></div>
+        <div class="circle3"></div>
+        <div class="circle4"></div>
+    </div>
+    <div class="spinner-container container2">
+        <div class="circle1"></div>
+        <div class="circle2"></div>
+        <div class="circle3"></div>
+        <div class="circle4"></div>
+    </div>
+    <div class="spinner-container container3">
+        <div class="circle1"></div>
+        <div class="circle2"></div>
+        <div class="circle3"></div>
+        <div class="circle4"></div>
+    </div>
+</div>
+
+<script>
+    function onload(Cesium) {
+        var viewer = new Cesium.Viewer('cesiumContainer');
+        var blackMarble = viewer.imageryLayers.addImageryProvider(new Cesium.SingleTileImageryProvider({
+            url: './images/BlackMarble_2012.jpg'
+        }));
+        let windowWidth = $('body').width(); // Window width
+        let windowHeight = $('body').height(); // Window height
+        let rollerShutterConfig = { // Roller blind configuration parameters, address transfer in object mode
+            splitDirection: new Cesium.Cartesian2(Cesium.ImagerySplitDirection.RIGHT, Cesium.ImagerySplitDirection.NONE), // 初始时屏蔽左侧
+            verticalSplitPosition: windowWidth / 2,
+            horizontalSplitPosition: windowHeight / 2,
+            imageryLayers: [blackMarble], // Image layer array participating in the roller blind
+            latestSplitDirection: null // For the direction of the roller blind before recovery after the roller blind is disabled
+        };
+        initRollerShutter(viewer, rollerShutterConfig);
+        $('#loadingbar').remove();
+    }
+
+    /**
+     * Initialize the roller blind. Set the initial position of the splitter and bind related events.
+     * @param viewer 。
+     * @param rollerShutterConfig Rolling shutter configuration parameters.
+     */
+    function initRollerShutter(viewer, rollerShutterConfig) {
+        setRollerShutterSplit(viewer, rollerShutterConfig);
+        bindSliderEvt(viewer, rollerShutterConfig);
+        $('input[type=radio][name="roller-mode"]').on('input propertychange', function () {
+            let splitDirectionCustomStr = $('input[type=radio][name="roller-mode"]:checked').val();
+            switch (splitDirectionCustomStr) {
+                case 'left-roller':
+                    rollerShutterConfig.splitDirection = new Cesium.Cartesian2(Cesium.ImagerySplitDirection.RIGHT, Cesium.ImagerySplitDirection.NONE);
+                    break;
+                case 'right-roller':
+                    rollerShutterConfig.splitDirection = new Cesium.Cartesian2(Cesium.ImagerySplitDirection.LEFT, Cesium.ImagerySplitDirection.NONE);
+                    break;
+                case 'top-roller':
+                    rollerShutterConfig.splitDirection = new Cesium.Cartesian2(Cesium.ImagerySplitDirection.NONE, Cesium.ImagerySplitDirection.BOTTOM);
+                    break;
+                case 'bottom-roller':
+                    rollerShutterConfig.splitDirection = new Cesium.Cartesian2(Cesium.ImagerySplitDirection.NONE, Cesium.ImagerySplitDirection.TOP);
+                    break;
+                default:
+                    break;
+            }
+            setRollerShutterSplit(viewer, rollerShutterConfig);
+        });
+
+        // Switch between "left and right mode" and "up and down mode"
+        $('input[type=radio][name="roller-category"]').on("input propertychange", function () {
+            let splitDirectionCategory = $('input[type=radio][name="roller-category"]:checked').val();
+            let verticalSlider = document.getElementById('vertical-slider');
+            let horizontalSlider = document.getElementById('horizontal-slider');
+            switch (splitDirectionCategory) {
+                case 'lr-roller':
+                    verticalSlider.style.display = 'block';
+                    horizontalSlider.style.display = 'none';
+                    $("#lr-roller-mode").css("display", "block");
+                    $("#tb-roller-mode").css("display", "none");
+                    rollerShutterConfig.splitDirection = new Cesium.Cartesian2(Cesium.ImagerySplitDirection.RIGHT, Cesium.ImagerySplitDirection.NONE);
+                    $("input[type=radio][value='left-roller']").prop("checked", "checked");
+                    break;
+                case 'tb-roller':
+                    verticalSlider.style.display = 'none';
+                    horizontalSlider.style.display = 'block';
+                    $("#lr-roller-mode").css("display", "none");
+                    $("#tb-roller-mode").css("display", "block");
+                    rollerShutterConfig.splitDirection = new Cesium.Cartesian2(Cesium.ImagerySplitDirection.NONE, Cesium.ImagerySplitDirection.BOTTOM);
+                    $("input[type=radio][value='top-roller']").prop("checked", "checked");
+                    break;
+                default:
+                    break;
+            }
+            setRollerShutterSplit(viewer, rollerShutterConfig);
+        });
+
+        // Whether to use roller blinds
+        $("#use-roller").on("input propertychange", function () {
+            let verticalSlider = document.getElementById('vertical-slider');
+            let horizontalSlider = document.getElementById('horizontal-slider');
+            if ($(this).prop("checked")) {
+                if (rollerShutterConfig.latestSplitDirection.equals(new Cesium.Cartesian2(Cesium.ImagerySplitDirection.LEFT, Cesium.ImagerySplitDirection.NONE)) ||
+                    rollerShutterConfig.latestSplitDirection.equals(new Cesium.Cartesian2(Cesium.ImagerySplitDirection.RIGHT, Cesium.ImagerySplitDirection.NONE))) {
+                    verticalSlider.style.display = 'block';
+                    horizontalSlider.style.display = 'none';
+                } else {
+                    verticalSlider.style.display = 'none';
+                    horizontalSlider.style.display = 'block';
+                }
+                rollerShutterConfig.splitDirection = rollerShutterConfig.latestSplitDirection;
+            } else {
+                rollerShutterConfig.latestSplitDirection = rollerShutterConfig.splitDirection;
+                rollerShutterConfig.splitDirection = new Cesium.Cartesian2(Cesium.ImagerySplitDirection.NONE, Cesium.ImagerySplitDirection.NONE);
+                verticalSlider.style.display = 'none';
+                horizontalSlider.style.display = 'none';
+            }
+            setRollerShutterSplit(viewer, rollerShutterConfig);
+        });
+    }
+
+    /**
+     * Register the drag and drop event of the roller blind splitter.
+     * @param viewer。
+     * @param rollerShutterConfig Rolling shutter configuration parameters.
+     */
+    function bindSliderEvt(viewer, rollerShutterConfig) {
+        let verticalSlider = document.getElementById('vertical-slider'); // Vertical split strip
+        let horizontalSlider = document.getElementById('horizontal-slider'); // Horizontal split bar
+        verticalSlider.addEventListener('mousedown', mouseDown, false);
+        horizontalSlider.addEventListener('mousedown', mouseDown, false);
+        let windowHeight = $('body').height();
+        document.addEventListener('mouseup', mouseUp, false);
+        function mouseUp(e) {
+            document.removeEventListener('mousemove', sliderMove, false);
+        }
+        function mouseDown(e) {
+            document.addEventListener('mousemove', sliderMove, false);
+        }
+        function sliderMove(e) { // Execute when the mouse is dragged
+            // Solve the problem of dragging the mouse
+            if (e.preventDefault) {
+                e.preventDefault();
+            } else {
+                e.returnValue = false;
+            }
+            if (rollerShutterConfig.splitDirection.equals(new Cesium.Cartesian2(Cesium.ImagerySplitDirection.LEFT, Cesium.ImagerySplitDirection.NONE))
+                || rollerShutterConfig.splitDirection.equals(new Cesium.Cartesian2(Cesium.ImagerySplitDirection.RIGHT, Cesium.ImagerySplitDirection.NONE))) {
+                verticalSlider.style.left = e.clientX + 'px';
+                rollerShutterConfig.verticalSplitPosition = e.clientX;
+            } else if (rollerShutterConfig.splitDirection.equals(new Cesium.Cartesian2(Cesium.ImagerySplitDirection.NONE, Cesium.ImagerySplitDirection.TOP))
+                || rollerShutterConfig.splitDirection.equals(new Cesium.Cartesian2(Cesium.ImagerySplitDirection.NONE, Cesium.ImagerySplitDirection.BOTTOM))) {
+                let clientY = e.clientY;
+                if (clientY < 0) {
+                    clientY = 0;
+                } else if (clientY > windowHeight) {
+                    clientY = windowHeight - $('#horizontal-slider').height();
+                }
+                horizontalSlider.style.top = clientY + 'px';
+                rollerShutterConfig.horizontalSplitPosition = windowHeight - clientY;
+            }
+            setRollerShutterSplit(viewer, rollerShutterConfig);
+        }
+    }
+
+    /**
+     * Initialize the roller blind. Set the initial position of the splitter and bind related events.
+     * @param scene Scene.
+     * @param rollerShutterConfig Rolling shutter configuration parameters.
+     */
+    function setRollerShutterSplit(viewer, rollerShutterConfig) {
+        let splitPosition = null;
+        if (rollerShutterConfig.splitDirection.equals(new Cesium.Cartesian2(Cesium.ImagerySplitDirection.LEFT, Cesium.ImagerySplitDirection.NONE))
+            || rollerShutterConfig.splitDirection.equals(new Cesium.Cartesian2(Cesium.ImagerySplitDirection.RIGHT, Cesium.ImagerySplitDirection.NONE))) {
+            splitPosition = rollerShutterConfig.verticalSplitPosition;
+        } else if (rollerShutterConfig.splitDirection.equals(new Cesium.Cartesian2(Cesium.ImagerySplitDirection.NONE, Cesium.ImagerySplitDirection.TOP))
+            || rollerShutterConfig.splitDirection.equals(new Cesium.Cartesian2(Cesium.ImagerySplitDirection.NONE, Cesium.ImagerySplitDirection.BOTTOM))) {
+            splitPosition = rollerShutterConfig.horizontalSplitPosition;
+        }
+        for (var imageryLayer of rollerShutterConfig.imageryLayers) {
+            imageryLayer.splitDirection = rollerShutterConfig.splitDirection;
+        }
+        if (splitPosition) { // It is not necessary to set the split position if the roller blind is disabled.
+            if (rollerShutterConfig.splitDirection.equals(new Cesium.Cartesian2(Cesium.ImagerySplitDirection.LEFT, Cesium.ImagerySplitDirection.NONE))
+                || rollerShutterConfig.splitDirection.equals(new Cesium.Cartesian2(Cesium.ImagerySplitDirection.RIGHT, Cesium.ImagerySplitDirection.NONE))) {
+                viewer.scene.imagerySplitPosition.x = splitPosition / $("body").width();
+            } else if (rollerShutterConfig.splitDirection.equals(new Cesium.Cartesian2(Cesium.ImagerySplitDirection.NONE, Cesium.ImagerySplitDirection.TOP)) ||
+                rollerShutterConfig.splitDirection.equals(new Cesium.Cartesian2(Cesium.ImagerySplitDirection.NONE, Cesium.ImagerySplitDirection.BOTTOM))) {
+                viewer.scene.imagerySplitPosition.y = splitPosition / $("body").height();
+            }
+        }
+    }
+</script>
+</body>
+</html>

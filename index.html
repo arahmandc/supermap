@@ -20,7 +20,10 @@
 		<style type="text/css">
 		body{ padding:10px; margin:0;} 
 		#layout{ width:100%; margin:40px; margin:0; padding:0;} 
-		#accordion{ width:149px;overflow:hidden;} 
+		#accordion{ width:149px;overflow:hidden;}
+		.btn-default {
+			min-width: 70px;
+		} 
 		</style>
 	</head>
   
@@ -38,7 +41,23 @@
 			<input id="disValue" type="text" value="50" />
 			<button class="btn btn-default" type="button" id="searchParking"> Search </button>
 			<button class="btn btn-default" type="button" id="clearParking">Clear</button>
-
+			<div id="div1" style="height:10px; border-bottom: 1px solid #D3D3D3;"></div>					
+				<div class="form-group">
+					<label for="exampleInputName2">Edit:</label>
+					<input id="edit" type="checkbox" style="margin: 10px 0 0 10px;">
+				</div>
+				<div class="form-group">
+					<label for="exampleInputName2">Purpose</label>
+					<input type="text" class="form-control" id="purpose" placeholder="Для автомобилей">
+				</div>
+				<div class="form-group">
+					<label for="exampleInputName2">Name</label>
+					<input type="text" class="form-control" id="name" placeholder="Парковка №9080">
+				</div>
+			<button class="btn btn-default" type="button" id="addParking">Add</button>
+			<button class="btn btn-default" type="button" id="selectParking">Select</button>
+			<button class="btn btn-default" type="button" id="modifyParking">Modify</button>
+			<button class="btn btn-default" type="button" id="deleteParking">Delete</button>
 			</div>
 			<div title="Network Analysis">
 			<!--You can design basic functions to show here, and common DOM elements can be presented-->
@@ -52,12 +71,13 @@
 				<a id="measureDistance" type="button" value="MeasureDistance" style="background-image:url('img/measuredistance.png');"> </a>
 				<a id="measureArea" type="button" value="MeasureArea" style="background-image:url('img/measurearea.png');"> </a>
 				<a id="clear" type="button" value="Clear" style="background-image:url('img/eraser.png');"> </a>
+				<a id="scene" type="button" value="Clear" style="background-image:url('img/scene.png');"> </a>
 
 			</div>			
 		</div>
 		<!--You can set copyright and other related footer content, common DOM-->
 		<div position="bottom">
-		<div style="height:32px; line-height:32px; text-align:center;">Copyright © 2016-2020 <a href="https://www.supermap.com/en-us/" target="_blank">SuperMap</a>, data is from 2GIS</div></div>
+		<div style="height:32px; line-height:32px; text-align:center;">Copyright © 2016-2020 <a href="https://www.supermap.com/en-us/" target="_blank"> SuperMap</a>, data is from 2GIS</div></div>
     </div>
   </body>
 

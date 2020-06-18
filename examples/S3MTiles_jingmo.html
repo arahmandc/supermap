@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+    <title>CBD</title>
+    <link href="../Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+    <script src="./js/config.js"></script>
+    <link href="./css/pretty.css" rel="stylesheet">
+    <script src="./js/jquery.min.js"></script>
+    <script type="text/javascript" src="./js/require.min.js" data-main="js/main"></script>
+</head>
+<body>
+<div id="cesiumContainer"></div>
+<div id="tool-bar" class="param-container tool-bar">
+    <label style="color: #FFFFFF" for="circulation">Loop rotation</label>
+    <input type="checkbox" id="circulation" checked = true>&nbsp&nbsp&nbsp
+    <button id="start" class="button black">Click to rotate</button>&nbsp&nbsp&nbsp
+    <button id="stop" class="button black">Stop rotation</button>
+</div>
+<script type="text/javascript">
+    /*Sample code description：
+     *Pick a point as the center point and rotate it
+     *
+     * Mainly related to interface：
+     * camera.flyCircle
+     * camera.flyCircleLoop
+     * camera.stopFlyCircle
+     * Sample code：
+   */
+    function onload(Cesium) {
+        var viewer = new Cesium.Viewer('cesiumContainer');
+        viewer.imageryLayers.addImageryProvider(new Cesium.BingMapsImageryProvider({
+            url : 'https://dev.virtualearth.net',
+            mapStyle : Cesium.BingMapsStyle.AERIAL,
+            key : URL_CONFIG.BING_MAP_KEY
+        }));
+        var scene = viewer.scene;
+        var widget = viewer.cesiumWidget;
+        try{
+            var promise = scene.open(URL_CONFIG.SCENE_CBD);
+            Cesium.when(promise,function(layer){
+                var camera = scene.camera;
+                camera.flyCircleLoop = true; // The camera rotates around the loop to open the loop mode
+                var center = new Cesium.Cartesian3(0,0,0);
+                var handlerPoint = new Cesium.DrawHandler(viewer,Cesium.DrawMode.Point);
+                handlerPoint.drawEvt.addEventListener(function(result){
+                    center = result.object.position;
+                    camera.flyCircle(center); // The camera rotates around the center point
+                });
+                $('#start').click(function(){
+                    handlerPoint.activate();
+                });
+                $('#circulation').on("input propertychange",function(){
+                    camera.flyCircleLoop = this.checked; // Set whether the rotation of the point is looping
+                });
+                $("#stop").click(function() {
+                   camera.stopFlyCircle(); // Stop the camera from rotating around the center point
+                });
+            },function(e){
+                if (widget._showRenderLoopErrors) {
+                    var title = 'Failed to load SCP. Please check the network connection status or url address is correct?';
+                    widget.showErrorPanel(title, undefined, e);
+                }
+            });
+        }
+        catch(e){
+            if (widget._showRenderLoopErrors) {
+                var title = 'An error occurred while rendering and the rendering has stopped.';
+                widget.showErrorPanel(title, undefined, e);
+            }
+        }
+
+    }  
+</script>
+</body>
+</html>

@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<head>
+    <meta charset="utf-8">
+    <title>Scanning effect</title>
+    <link href="../Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+    <link href="./css/pretty.css" rel="stylesheet">
+    <script type="text/javascript" src="./js/jquery.min.js"></script>
+    <script src="./js/config.js"></script>
+    <script src="./js/tooltip.js"></script>
+    <script src="./js/spectrum.js"></script>
+    <script type="text/javascript" src="./js/require.min.js" data-main="js/main"></script>
+</head>
+<body>
+<div id="cesiumContainer"></div>
+<div class="params-setting-container">
+    <div class="params-setting-anchor" title="Show/hide parameter panel"><span class="fui-expand"></span></div>
+    <div class="params-setting">
+        <div class="param-item">
+            <label for="scanShow">Turn on scanning</label>
+            <input type="checkbox" id="scanShow">
+        </div>
+        <div class="param-item">
+            <label>Scan mode:</label>
+            <label for="line-scan-mode">Linear scan</label>
+            <input type="radio" name="scan-mode" value="line-scan-mode" id="line-scan-mode" checked>
+            <label for="ring-scan-mode">Ring scan</label>
+            <input type="radio" name="scan-mode" value="ring-scan-mode" id="ring-scan-mode">
+        </div>
+        <div class="param-item">
+            <label>Scan color</label>
+            <input type="text" id="scan-color"/>
+        </div>
+        <div class="param-item">
+            <button type="button" class="button black" id="set-scan-direction">Custom scan direction</button>
+        </div>
+        <div class="divider"></div>
+        <div class="param-item">
+            <label for="colorCorrectionShow">Color correction on</label>
+            <input type="checkbox" id="colorCorrectionShow" checked>
+        </div>
+        <div class="param-item">
+            <label>saturation</label>
+            <input type="range" id="saturation" min="-10" max="30" value="1.4" step="0.1" style="width: 170px">
+            <label id ="saturation_label"></label>
+        </div>
+        <div class="param-item">
+            <label>brightness</label>
+            <input type="range" id="brightness" min="0" max="1" value="1" step="0.01" style="width: 170px">
+            <label id ="brightness_label"></label>
+        </div>
+        <div class="param-item">
+            <label>Contrast</label>
+            <input type="range" id="contrast" min="-10" max="10" value="1" step="0.1" style="width: 170px">
+            <label id ="contrast_label"></label>
+        </div>
+        <div class="param-item">
+            <label>tone</label>
+            <input type="range" id="hue" min="0" max="3" value="0" step="0.1" style="width: 170px">
+            <label id ="hue_label"></label>
+        </div>
+        <div class="divider"></div>
+        <div class="param-item">
+            <label for="bloomShow">Turn on floodlight</label>
+            <input type="checkbox"  id="bloomShow">
+        </div>
+        <div class="param-item">
+            <label>Brightness threshold</label>
+            <input type="range" id="bloom-threshold" min="0" max="1" value="0.8" step="0.01" style="width: 170px">
+            <label id="bloom-threshold-label"></label>
+        </div>
+        <div class="param-item">
+            <label>Flood intensity</label>
+            <input type="range" id="bloom-intensity" min="0" max="10" value="1" step="0.1" style="width: 170px">
+            <label id="bloom-intensity-label"></label>
+        </div>
+        <div class="divider"></div>
+        <div class="param-item">
+            <label for="DOFShow">Open depth of field</label>
+            <input type="checkbox" id="DOFShow">
+        </div>
+        <div class="param-item">
+            <label>focal length</label>
+            <input type="range" id="focalDistance" min="0.1" max="1000.0"  value="100" step="0.1" style="width: 170px">
+            <label id ="focalDistance_label"></label>
+        </div>
+        <div class="param-item">
+            <label>Focus range</label>
+            <input type="range" id="focalRange" min="0" max="200"  value="60" step="1" style="width: 170px">
+            <label id ="focalRange_label"></label>
+        </div>
+        <div class="param-item">
+            <label>L value of the lens</label>
+            <input type="range"  id="cameraF" min="1.0" max="16"  value="2.8" step="0.1" style="width: 170px">
+            <label id ="cameraF_label"></label>
+        </div>
+        <div class="param-item">
+            <label>Out-of-focus blur radius</label>
+            <input type="range"  id="dofblurRadius" min="0.1" max="20.0"  value="10.0" step="0.1" style="width: 170px">
+            <label id ="dofblurRadius_label"></label>
+        </div>
+    </div>
+</div>
+<script>
+    function onload(Cesium) {
+
+        $(".params-setting-anchor").click(function(){
+            $(".params-setting").toggleClass("params-setting-hide");
+        });
+
+        var viewer = new Cesium.Viewer('cesiumContainer',{
+            infobox:false
+        });
+        viewer.imageryLayers.addImageryProvider(new Cesium.BingMapsImageryProvider({
+            url : 'https://dev.virtualearth.net',
+            mapStyle : Cesium.BingMapsStyle.AERIAL,
+            key : URL_CONFIG.BING_MAP_KEY
+        }));
+
+        var scene = viewer.scene;
+        scene.fxaa = true;
+        scene.skyAtmosphere.show = false;
+
+        var promise = scene.open(URL_CONFIG.SCENE_CBD);
+        Cesium.when(promise,function(layers){
+            var tooltip = createTooltip(document.body);
+            var tooltipMsg = "";
+            var clickCount = 0;
+            var refLayer = layers[0];
+            //Set camera position, navigate to model
+            scene.camera.setView({
+                destination : new Cesium.Cartesian3(-2180733.097675902, 4379639.149392802, 4092613.146140101),
+                orientation:{
+                    heading: 4.419871112141432,
+                    pitch: -0.40767078314183536,
+                    roll: 1.0658141036401503e-14
+                }
+            });
+            // Color correction is turned on initially
+            viewer.scene.colorCorrection.show = true;
+            viewer.scene.colorCorrection.saturation = $("#saturation").val();
+            viewer.scene.colorCorrection.brightness = $("#brightness").val();
+            viewer.scene.colorCorrection.contrast = $("#contrast").val();
+            viewer.scene.colorCorrection.hue = $("#hue").val();
+
+            // Initial synchronization parameter setting and display
+            $("#saturation_label").text($("#saturation").val()); // saturation
+            $("#brightness_label").text($("#brightness").val()); // brightness
+            $("#contrast_label").text($("#contrast").val()); // Contrast
+            $("#hue_label").text($("#hue").val()); // tone
+            $("#bloom-threshold-label").text($("#bloom-threshold").val()); // Brightness threshold
+            $("#bloom-intensity-label").text($("#bloom-intensity").val()); // Flood intensity
+            $("#focalDistance_label").text($("#focalDistance").val()); // focal length
+            $("#focalRange_label").text($("#focalRange").val()); // Focal length
+            $("#cameraF_label").text($("#cameraF").val()); // L value of the lens
+            $("#dofblurRadius_label").text($("#dofblurRadius").val()); // Out-of-focus blur radius
+
+            // Initialize color selection controls
+            var initialScanColor = "#2263e6";
+            viewer.scene.scanEffect.color = Cesium.Color.fromCssColorString(initialScanColor);
+            $("#scan-color").spectrum({
+                color: initialScanColor,
+                chooseText: "determine",
+                cancelText: "cancel",
+                showAlpha: true,
+                change: function(color){
+                    var colorObj = color.toRgb();
+                    viewer.scene.scanEffect.color = new Cesium.Color(colorObj.r / 255, colorObj.g / 255, colorObj.b /255, colorObj.a);
+                }
+            });
+
+            var handlerActive = false; // True means the scan point selection is in progress
+            var handler = new Cesium.ScreenSpaceEventHandler(scene.canvas);
+            handler.setInputAction(function(e){
+                if(!handlerActive){
+                    return;
+                }
+                clickCount++;
+
+                // Get mouse screen coordinates and convert them to Cartesian coordinates
+                var position = e.position;
+                var last = scene.pickPosition(position);
+                var scanMode = $("input[name='scan-mode']:checked").val(); // Get the current scan mode
+                if(scanMode === "line-scan-mode"){
+                    if(clickCount == 1){
+                        viewer.scene.scanEffect.centerPostion = last; // Set the scan center point
+                        tooltipMsg = "Click to set the scanning direction";
+                    }else if(clickCount == 2){
+                        var dir = new Cesium.Cartesian3();
+                        Cesium.Cartesian3.subtract(last, viewer.scene.scanEffect.centerPostion, dir); // Get the scan direction vector
+                        viewer.scene.scanEffect.lineMoveDirection = dir;
+
+                        clickCount = 0;
+                        handlerActive = false;
+                        tooltip.setVisible(false);
+                    }
+                }else{
+                    viewer.scene.scanEffect.centerPostion = last;
+
+                    clickCount = 0;
+                    handlerActive = false;
+                    tooltip.setVisible(false);
+                }
+            }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+
+            handler.setInputAction(function(e){
+                if(!handlerActive){
+                    return;
+                }
+                tooltip.showAt(e.endPosition, tooltipMsg);
+            }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+
+            $("#colorCorrectionShow").on("input change",function(){
+                viewer.scene.colorCorrection.show = this.checked;
+            });
+
+            $("#saturation").on("input change",function(){
+                $("#saturation_label").text(this.value);
+                viewer.scene.colorCorrection.saturation = this.value;
+            });
+
+            $("#brightness").on("input change",function(){
+                $("#brightness_label").text(this.value);
+                viewer.scene.colorCorrection.brightness = this.value;
+            });
+
+            $("#contrast").on("input change",function(){
+                $("#contrast_label").text(this.value);
+                viewer.scene.colorCorrection.contrast = this.value;
+            });
+
+            $("#hue").on("input change",function(){
+                $("#hue_label").text(this.value);
+                viewer.scene.colorCorrection.hue = this.value;
+            });
+
+            $("#bloomShow").on("input change",function(){
+                viewer.scene.bloomEffect.show = this.checked;
+                viewer.scene.bloomEffect.threshold = $("#bloom-threshold").val();
+                viewer.scene.bloomEffect.bloomIntensity = $("#bloom-intensity").val();
+            });
+
+            $("#bloom-threshold").on("input change", function(){
+                $("#bloom-threshold-label").text(this.value);
+                viewer.scene.bloomEffect.threshold = this.value;
+            });
+
+            $("#bloom-intensity").on("input change", function(){
+                $("#bloom-intensity-label").text(this.value);
+                viewer.scene.bloomEffect.bloomIntensity = this.value;
+            });
+
+            $("#scanShow").on("input change",function(){
+                viewer.scene.scanEffect.show = this.checked;
+                var pos = new Cesium.Cartesian3.fromDegrees(refLayer.lon,refLayer.lat,10.0);
+                viewer.scene.scanEffect.centerPostion = pos;
+            });
+
+            $("input[name='scan-mode']").on("input change",function(){
+                viewer.scene.scanEffect.mode = this.value === "line-scan-mode" ? Cesium.ScanEffectMode.LINE : Cesium.ScanEffectMode.CIRCLE;
+                if(this.value === "line-scan-mode"){
+                    $("#set-scan-direction").text("Custom scan direction");
+                }else{
+                    $("#set-scan-direction").text("Custom scan center");
+                }
+            });
+
+            $("#DOFShow").on("input change",function(){
+                viewer.scene.depthOfFieldEffect.show = this.checked;
+            });
+
+            $("#focalDistance").on("input change",function(){
+                $("#focalDistance_label").text(this.value);
+                viewer.scene.depthOfFieldEffect.focalDistance = this.value;
+            });
+
+            $("#focalRange").on("input change",function(){
+                $("#focalRange_label").text(this.value);
+                viewer.scene.depthOfFieldEffect.focalRange = this.value;
+            });
+
+            $("#cameraF").on("input change",function(){
+                $("#cameraF_label").text(this.value);
+                viewer.scene.depthOfFieldEffect.fStop = this.value;
+            });
+
+            $("#dofblurRadius").on("input change",function(){
+                $("#dofblurRadius_label").text(this.value);
+                viewer.scene.depthOfFieldEffect.blurRadius = this.value;
+            });
+
+            $("#set-scan-direction").click(function(){
+                handlerActive = true;
+                tooltip.setVisible(true);
+                tooltipMsg = "Click to set up the scanning center";
+            });
+        });
+    }
+</script>
+</body>

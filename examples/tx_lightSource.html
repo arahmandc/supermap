@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+
+<head>
+	<meta charset="utf-8">
+	<title>Flood light source</title>
+	<link href="../Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+	<link href="./css/pretty.css" rel="stylesheet">
+	<script type="text/javascript" src="./js/jquery.min.js"></script>
+	<script src="./js/config.js"></script>
+	<script src="./js/tooltip.js"></script>
+	<script src="./js/spectrum.js"></script>
+	<script type="text/javascript" src="./js/require.min.js" data-main="js/main"></script>
+</head>
+
+<body>
+	<div id="cesiumContainer"></div>
+	<div class="params-setting-container">
+		<div class="params-setting-anchor" title="Show/hide parameter panel"><span class="fui-expand"></span></div>
+		<div class="params-setting">
+			<div class="param-item">
+				<label for="bloomShow">Turn on floodlight</label>
+				<input type="checkbox" id="bloomShow">
+			</div>
+			<div class="param-item">
+				<label>Brightness threshold</label>
+				<input type="range" id="bloom-threshold" min="0" max="1" value="0.85" step="0.01" style="width: 120px">
+			</div>
+			<div class="param-item">
+				<label>Flood intensity</label>
+				<input type="range" id="bloom-intensity" min="0" max="10" value="4" step="0.1" style="width: 120px">
+			</div>
+			<div class="param-item">
+				<label for="hdrShow">Turn on HDR</label>
+				<input type="checkbox" id="hdrShow">
+			</div>
+			<h1 class="title"></h1>
+			<div class="param-item">
+				<input type="button" id="pointlight" value="Add point source" title="Please turn off the existing light source before adding">
+				<input type="button" id="closepointlight" value="Turn off the point source">
+			</div>
+			<div class="param-item">
+				<label>Diffusion distance:</label>
+				<input type="range" id="p_distance" min="0" max="20000" value="1000" step="10" style="width: 120px">
+			</div>
+			<div class="param-item">
+				<label>Attenuation factor:</label>
+				<input type="range" id="p_dacay" min="0" max="100" value="0.5" step="0.1" style="width: 120px">
+			</div>
+			<div class="param-item">
+				<label>Light source intensity:</label>
+				<input type="range" id="p_intensity" min="0" max="20" value="8" step="0.5" style="width: 120px">
+			</div>
+			<h1 class="title"></h1>
+
+			<div class="param-item">
+				<input type="button" id="spotlight" value="Adding a light source" title="Please turn off the existing light source before adding">
+				<input type="button" id="closespotlight" value="Turn off the light source">
+			</div>
+			<div class="param-item">
+				<label>Light distance:</label>
+				<input type="range" id="s_distance" min="0" max="2000" value="1000" step="1" style="width: 120px">
+			</div>
+			<div class="param-item">
+				<label>Attenuation factor:</label>
+				<input type="range" id="s_dacay" min="0" max="6" value="0.5" step="0.1" style="width: 120px">
+			</div>
+			<div class="param-item">
+				<label>Light source intensity:</label>
+				<input type="range" id="s_intensity" min="0" max="20" value="8" step="0.1" style="width: 120px">
+			</div>
+		</div>
+	</div>
+	<script>
+		function onload(Cesium) {
+			 
+			var viewer = new Cesium.Viewer('cesiumContainer', {
+				infobox: false
+			});
+			viewer.imageryLayers.addImageryProvider(new Cesium.SingleTileImageryProvider({
+				url: './images/BlackMarble_2016.jpg'
+			}));
+			var scene = viewer.scene;
+			var pointLight, pointLight2, pointLight3;
+			var spotLight, spotLight2, spotLight3;
+			//Setting ambient light
+			scene.lightSource.ambientLightColor = new Cesium.Color(0.4, 0.4, 0.4, 0.4);
+			//Set scene color correction
+			viewer.scene.colorCorrection.show = true;
+			viewer.scene.colorCorrection.saturation = 1;
+			viewer.scene.colorCorrection.brightness = 0.6;
+			viewer.scene.colorCorrection.contrast = 1;
+			viewer.scene.colorCorrection.hue = 0;
+			var promise = scene.open(URL_CONFIG.SCENE_CHONGQING_TX);
+			Cesium.when(promise, function(layers) {
+				
+				var refLayer = layers[0];
+				//Set self-illumination
+				refLayer.style3D.emissionColor = new Cesium.Color(1, 1, 1, 1);
+				//Set camera position, navigate to model
+				scene.camera.setView({
+					destination: new Cesium.Cartesian3(-1570817.4642651612, 5319898.6362971235, 3151859.865965396),
+					orientation: {
+						heading: 2.7138026855834787,
+						pitch: -0.38919358992513686,
+						roll: 0.00007970940853230246
+					}
+				});
+				//Flood switch
+				$("#bloomShow").on("input change", function() {
+					viewer.scene.bloomEffect.show = this.checked;
+					viewer.scene.bloomEffect.threshold = $("#bloom-threshold").val();
+					viewer.scene.bloomEffect.bloomIntensity = $("#bloom-intensity").val();
+				});
+				//HDR switch
+				$("#hdrShow").on("input change", function() {
+					viewer.scene.hdrEnabled = this.checked;
+				});
+				//Flood threshold
+				$("#bloom-threshold").on("input change", function() {
+					$("#bloom-threshold-label").text(this.value);
+					viewer.scene.bloomEffect.threshold = this.value;
+				});
+				//Flood intensity
+				$("#bloom-intensity").on("input change", function() {
+					$("#bloom-intensity-label").text(this.value);
+					viewer.scene.bloomEffect.bloomIntensity = this.value;
+				});
+
+			});
+			//Set the function panel to show hidden
+			$(".params-setting-anchor").click(function() {
+				$(".params-setting").toggleClass("params-setting-hide");
+			});
+			//Adjust point light source illumination distance
+			$('#p_distance').bind('input propertychange', function() {
+				var value = Number($(this).val());
+				pointLight.cutoffDistance = value;
+				pointLight1.cutoffDistance = value;
+				pointLight2.cutoffDistance = value;
+			});
+			//Adjusting point source attenuation factor
+			$('#p_dacay').bind('input propertychange', function() {
+				var value = Number($(this).val());
+				pointLight.decay = value;
+				pointLight1.decay = value;
+				pointLight2.decay = value;
+			});
+			//Adjust point light source illumination intensity
+			$('#p_intensity').bind('input propertychange', function() {
+				var value = Number($(this).val());
+				pointLight.intensity = value;
+				pointLight1.intensity = value;
+				pointLight2.intensity = value;
+			});
+			//Add point source
+			$("#pointlight").on("click", function() {
+				var position = new Cesium.Cartesian3(-1573957.6722864746, 5319396.971193576, 3147647.55440275);
+				var options = {
+					color: new Cesium.Color(1, 48 / 255, 48 / 255, 1),//光源颜色
+					cutoffDistance: 1000,
+					decay: 0.5,
+					intensity: 8
+				};
+				pointLight = new Cesium.PointLight(position, options);
+				scene.addLightSource(pointLight);
+
+				var position1 = new Cesium.Cartesian3(-1571887.3911969515, 5320437.656993766, 3147031.6544186124);
+				var options1 = {
+					color: new Cesium.Color(0, 0.59, 1, 1),
+					cutoffDistance: 1000,
+					decay: 0.5,
+					intensity: 8
+				};
+				pointLight1 = new Cesium.PointLight(position1, options1);
+				scene.addLightSource(pointLight1);
+
+				var position2 = new Cesium.Cartesian3(-1571659.1062964052, 5321392.8916459, 3145402.9292302066);
+				var options2 = {
+					color: new Cesium.Color(127 / 255, 1, 0, 1),
+					cutoffDistance: 1000,
+					decay: 0.5,
+					intensity: 8
+				};
+				pointLight2 = new Cesium.PointLight(position2, options2);
+				scene.addLightSource(pointLight2);
+
+			});
+			//Turn off the point source
+			$("#closepointlight").on("click", function() {
+				scene.removeLightSource(pointLight);
+				scene.removeLightSource(pointLight1);
+				scene.removeLightSource(pointLight2);
+
+			});
+			//Adjust the illumination distance of the concentrated light source
+			$('#s_distance').bind('input propertychange', function() {
+				var value = Number($(this).val());
+				spotLight.distance = value;
+				spotLight2.distance = value;
+				spotLight3.distance = value;
+			});
+			//Adjusting the concentration factor of the concentrated light source
+			$('#s_dacay').bind('input propertychange', function() {
+				var value = Number($(this).val());
+				spotLight.decay = value;
+				spotLight2.decay = value;
+				spotLight3.decay = value;
+			});
+			//Adjust the light intensity of the concentrated light source
+			$('#s_intensity').bind('input propertychange', function() {
+				var value = Number($(this).val());
+				spotLight.intensity = value;
+				spotLight2.intensity = value;
+				spotLight3.intensity = value;
+			});
+			//Turn off the light source
+			$("#closespotlight").on("click", function() {
+				scene.removeLightSource(spotLight);
+				scene.removeLightSource(spotLight3);
+				scene.removeLightSource(spotLight2);
+			});
+			//Adding a light source
+			$("#spotlight").on("click", function() {
+				var positions = new Cesium.Cartesian3(-1572377.377707747, 5321316.07210693, 3147743.188520776);
+				var targetPosition = new Cesium.Cartesian3(-1572136.8462505843, 5320756.88046571, 3147442.383152984);
+				var options = {
+					color: new Cesium.Color(0, 0.59, 1, 1),
+					distance: 2000,
+					decay: 0.5,
+					intensity: 8
+				};
+				spotLight = new Cesium.SpotLight(positions, targetPosition, options);
+				scene.addLightSource(spotLight);
+
+				var position2 = new Cesium.Cartesian3(-1574145.1350839112, 5320269.105096138, 3148595.612270606);
+				var targetPosition2 = new Cesium.Cartesian3(-1574029.9887430102, 5319804.008009503, 3148346.1118617076);
+				var options2 = {
+					color: new Cesium.Color(1, 48 / 255, 48 / 255, 1),
+					distance: 2000,
+					decay: 0.5,
+					intensity: 8
+				};
+				spotLight2 = new Cesium.SpotLight(position2, targetPosition2, options2);
+				scene.addLightSource(spotLight2);
+
+				var position3 = new Cesium.Cartesian3(-1571971.6044437697, 5322052.3361527035, 3146054.7846809993);
+				var targetPosition3 = new Cesium.Cartesian3(-1571822.626001353, 5321628.24311839, 3145822.194691074);
+				var options3 = {
+					color: new Cesium.Color(127 / 255, 1, 0, 1),
+					distance: 2000,
+					decay: 0.5,
+					intensity: 8
+				};
+				spotLight3 = new Cesium.SpotLight(position3, targetPosition3, options3);
+				scene.addLightSource(spotLight3);
+
+			})
+
+			//Load line data
+			var roadLine1 = Cesium.GeoJsonDataSource.load('./data/json/lineback_1.json');
+			roadLine1.then(function(dataSource) {
+				viewer.dataSources.add(dataSource);
+				var lines_1 = dataSource.entities.values;
+				for(var i = 0; i < lines_1.length; i++) {
+					var line = lines_1[i];
+					line.polyline.material = new Cesium.PolylineGlowMaterialProperty({ //设置Glow材质
+						glowPower: 0.001,
+						color: Cesium.Color.ORANGERED.withAlpha(0.9)
+					});
+					line.polyline.width = 12;
+				}
+
+			}).otherwise(function(error) {
+				window.alert(error);
+			});
+
+			var roadLine2 = Cesium.GeoJsonDataSource.load('./data/json/lineback2_1.json');
+			roadLine2.then(function(dataSource) {
+				viewer.dataSources.add(dataSource);
+				var lines_2 = dataSource.entities.values;
+				for(var i = 0; i < lines_2.length; i++) {
+					var line = lines_2[i];
+					line.polyline.material = new Cesium.PolylineGlowMaterialProperty({ //设置Glow材质
+						glowPower: 0.001,
+						color: Cesium.Color.ORANGERED.withAlpha(0.9)
+					});
+					line.polyline.width = 12;
+				}
+			}).otherwise(function(error) {
+				window.alert(error);
+			});
+			var roadLine3 = Cesium.GeoJsonDataSource.load('./data/json/lineback3_1.json');
+			roadLine3.then(function(dataSource) {
+				viewer.dataSources.add(dataSource);
+				var lines_3 = dataSource.entities.values;
+				for(var i = 0; i < lines_3.length; i++) {
+					var line = lines_3[i];
+					line.polyline.material = new Cesium.PolylineGlowMaterialProperty({ //设置Glow材质
+						glowPower: 0.001,
+						color: Cesium.Color.ORANGERED.withAlpha(0.9)
+					});
+					line.polyline.width = 12;
+				}
+			}).otherwise(function(error) {
+				window.alert(error);
+			});
+
+		}
+	</script>
+</body>

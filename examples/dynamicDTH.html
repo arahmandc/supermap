@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+    <title>Dynamic singulation</title>
+    <link href="../Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+    <link href="./css/bootstrap.min.css" rel="stylesheet">
+    <link href="./css/pretty.css" rel="stylesheet">
+    <script src="./js/jquery.min.js"></script>
+    <script src="./js/bootstrap.min.js"></script>
+    <script src="./js/bootstrap-select.min.js"></script>
+    <script src="./js/config.js"></script>
+    <script type="text/javascript" src="./js/require.min.js" data-main="js/main"></script>
+</head>
+<body>
+<div id="cesiumContainer"></div>
+<div id='loadingbar' class="spinner">
+    <div class="spinner-container container1">
+        <div class="circle1"></div>
+        <div class="circle2"></div>
+        <div class="circle3"></div>
+        <div class="circle4"></div>
+    </div>
+    <div class="spinner-container container2">
+        <div class="circle1"></div>
+        <div class="circle2"></div>
+        <div class="circle3"></div>
+        <div class="circle4"></div>
+    </div>
+    <div class="spinner-container container3">
+        <div class="circle1"></div>
+        <div class="circle2"></div>
+        <div class="circle3"></div>
+        <div class="circle4"></div>
+    </div>
+</div>
+<div id='toolbar' class="param-container tool-bar">
+    <p>Notes:</p>
+    <span>Click on the house surface to see the dynamic singulation effect</span>
+</div>
+<script>
+    function onload(Cesium) {
+        var viewer = new Cesium.Viewer('cesiumContainer');
+        var scene = viewer.scene;
+        var camera = scene.camera;
+
+        // Method 1: Add a singular identification surface in the form of a data service
+        // (Recommended Use)
+        var dataServiceUrl = 'http://www.supermapol.com/realspace/services/data-dynamicDTH/rest/data/featureResults.rjson?returnContent=true'; // 数据服务URL
+        var dataSourceName = '铁岭矢量面'; 
+        var dataSetName = 'New_Region3D_1'; 
+        // Load a oblique photogrammetric layer
+        var promise = scene.addS3MTilesLayerByScp('http://www.supermapol.com/realspace/services/3D-dynamicDTH/rest/realspace/datas/Config%20-%201/config', {
+            name: 'oblique photography'
+        });
+        promise.then(function (obliqueLayers) {
+            camera.setView({ // Position first to start rendering the photogrammetric data of the positioning area
+                destination: new Cesium.Cartesian3(-2623004.4174251584, 3926981.958360567, 4287374.829655093),
+                orientation: {
+                    heading: 4.39611370540786,
+                    pitch: -0.43458664812464143,
+                    roll: 2.0174972803488345e-11
+                }
+            });
+
+            var handler = new Cesium.ScreenSpaceEventHandler(scene.canvas);
+            handler.setInputAction(function (e) {
+                // Add the identity entity before removing it first
+                viewer.entities.removeById('identify-area');
+                // Get the click position Cartesian coordinates
+                var position = scene.pickPosition(e.position);
+                // Get latitude and longitude from Cartesian coordinates
+                var cartographic = Cesium.Cartographic.fromCartesian(position);
+                var longitude = Cesium.Math.toDegrees(cartographic.longitude);
+                var latitude = Cesium.Math.toDegrees(cartographic.latitude);
+
+                var queryPoint = { // Query point object
+                    x: longitude,
+                    y: latitude
+                };
+
+                queryByPoint(queryPoint);
+
+            }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+
+            // Remove loading animation
+            $('#toolbar').show();
+            $('#loadingbar').remove();
+        });
+
+        // Add a highlight to the scene by clicking on the query to represent the singulated polygon features.
+        function queryByPoint(queryPoint) {
+            var queryObj = {
+                "getFeatureMode": "SPATIAL",
+                "spatialQueryMode": "INTERSECT",
+                "datasetNames": [dataSourceName + ":" + dataSetName],
+                "geometry": {
+                    id: 0,
+                    parts: [1],
+                    points: [queryPoint],
+                    type: "POINT"
+                }
+            };
+
+            queryObjJSON = JSON.stringify(queryObj); // Convert to JSON string as query parameter
+
+            $.ajax({
+                type: "post",
+                url: dataServiceUrl,
+                data: queryObjJSON,
+                success: function (result) {
+                    var resultObj = JSON.parse(result);
+                    if (resultObj.featureCount > 0) {
+                        addClapFeature(resultObj.features[0]);
+                    }
+                },
+                error: function (msg) {
+                    console.log(msg);
+                }
+            })
+        }
+
+        // Add the features queried by the data service to the scene to highlight it, indicating that the effect is selected.
+        function addClapFeature(feature) {
+            var lonLatArr = getLonLatArray(feature.geometry.points);
+            viewer.entities.add({
+                id: 'identify-area',
+                name: '单体化标识面',
+                polygon: {
+                    hierarchy: Cesium.Cartesian3.fromDegreesArray(lonLatArr),
+                    material: new Cesium.Color(1.0, 0.0, 0.0, 0.3),
+                },
+                clampToS3M: true // Paste on the surface of the S3M model
+            });
+        }
+
+        // Get an array of the form [longitude, latitude, longitude, latitude...] for constructing faces.
+        function getLonLatArray(points) {
+            var point3D = [];
+            points.forEach(function (point) {
+                point3D.push(point.x);
+                point3D.push(point.y);
+            });
+            return point3D;
+        }
+
+        /*
+         // Method 2: Load as a layer
+         // Loading oblique photogrammetric data
+         var promise2 = scene.addS3MTilesLayerByScp('http://www.supermapol.com/realspace/services/3D-dynamicDTH/rest/realspace/datas/Config%20-%201/config',{name : 'oblique photography'});
+         Cesium.when.all([promise2], function(obliqueLayers){ // After the oblique photogrammetric data is loaded, the vector surface is loaded, otherwise the vector surface cannot find the target to paste the object.
+         camera.setView({ // Position first to start rendering the oblique photogrammetry of the positioning area
+         destination : new Cesium.Cartesian3(-2623004.4174251584, 3926981.958360567, 4287374.829655093),
+         orientation : {
+         heading: 4.39611370540786,
+         pitch : -0.43458664812464143,
+         roll : 2.0174972803488345e-11
+         }
+         });
+         // Load vector surface data
+         var promise1 = scene.addS3MTilesLayerByScp('http://www.supermapol.com/realspace/services/3D-dynamicDTH/rest/realspace/datas/New_Region3D_1_%E9%93%81%E5%B2%AD%E7%9F%A2%E9%87%8F%E9%9D%A2/config', {
+         name:'vector area'
+         });
+         Cesium.when.all([promise1], function(vectorLayers){
+         var vectorLayer = scene.layers.find('vector area'); // Vector layer
+         vectorLayer.style3D._fillForeColor.alpha = 0; // Vector layer fills the foreground color transparent
+         vectorLayer.selectedColor = new Cesium.Color(1.0, 0.0, 0.0, 0.5); // Give a visible color when selected
+         vectorLayer.selectColorType = 1; // The display type of the selected color is the replacement color.
+         vectorLayer.selectEnabled = true; // Vector layer optional
+         });
+         // Remove loading animation
+         $('#toolbar').show();
+         $('#loadingbar').remove();
+         });
+         */
+
+        /*
+         // Method three, load in the way of the scene
+         var promises = scene.open('http://www.supermapol.com/realspace/services/3D-dynamicDTH/rest/realspace');
+         Cesium.when.all(promises, function(layers){
+         camera.setView({ // Position first to start rendering the oblique photogrammetric data of the positioning area
+         destination : new Cesium.Cartesian3(-2623004.4174251584, 3926981.958360567, 4287374.829655093),
+         orientation : {
+         heading: 4.39611370540786,
+         pitch : -0.43458664812464143,
+         roll : 2.0174972803488345e-11
+         }
+         });
+         var vectorLayer = scene.layers.find('New_Region3D_1_铁岭矢量面'); 
+         vectorLayer.style3D._fillForeColor.alpha = 0; // Vector layer fills the foreground color transparent
+         vectorLayer.selectedColor = new Cesium.Color(1.0, 0.0, 0.0, 0.5); // Give a visible color when selected
+         vectorLayer.selectColorType = 1; // The display type of the selected color is the replacement color.
+         vectorLayer.selectEnabled = true; // Vector layer optional
+         // Vector layer optional
+         $('#toolbar').show();
+         $('#loadingbar').remove();
+         });
+         */
+    }
+</script>
+</body>
+</html>

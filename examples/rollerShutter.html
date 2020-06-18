@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+    <title>Roller blind</title>
+    <link href="../Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+    <link href="./css/pretty.css" rel="stylesheet">
+    <script src="./js/jquery.min.js"></script>
+    <script src="./js/config.js"></script>
+    <script type="text/javascript" src="./js/require.min.js" data-main="js/main"></script>
+</head>
+<body>
+<div id="cesiumContainer">
+    <div id="vertical-slider"></div>
+    <div id="horizontal-slider" style="display: none;"></div>
+</div>
+<div id="tool-bar" class="param-container tool-bar">
+    <div id="legend" class="legend">
+<div class="legend-item"><input id="disable-roller" type="radio" name="split-direction" value="disable-roller"/><label for="disable-roller"> Disable roller blinds</label></div>
+         <div class="legend-item"><input id="hide-left" type="radio" name="split-direction" value="hide-left"/><label for="hide-left"> Shield left</label></div>
+         <div class="legend-item"><input id="hide-right" type="radio" name="split-direction" value="hide-right" checked/><label for="hide-right" > Shield right</label></div>
+         <div class="legend-item"><input id="hide-top" type="radio" name="split-direction" value="hide-top"/><label for="hide-top"> Shield above</label></div>
+         <div class="legend-item"><input id="hide-bottom" type="radio" name="split-direction" value="hide-bottom"/><label for="hide-bottom"> Shield below</label></div>
+    </div>
+</div>
+<script type="text/javascript">
+    /* Sample code description:
+     * Horizontal and vertical roller blinds.
+     *
+     * Mainly related to the interface:
+     * S3MTilesLayer.prototype.splitDirection Rolling shutter split direction
+     *      Possible values: Cesium.SplitDirection.NONE disables roller blinds
+     *              Cesium.SplitDirection.LEFT Shield left
+     *              Cesium.SplitDirection.RIGHT Shield right side
+     *              Cesium.SplitDirection.TOP Shield above
+     *              Cesium.SplitDirection.BOTTOM Under the shield
+     *
+     * S3MTilesLayer.prototype.splitPosition Under the shield
+     *
+     * Sample code:
+     */
+    function onload(Cesium) {
+        let viewer = new Cesium.Viewer('cesiumContainer',{
+            imageryProvider: new Cesium.BingMapsImageryProvider({
+                url : 'https://dev.virtualearth.net',
+                mapStyle : Cesium.BingMapsStyle.AERIAL,
+                key : URL_CONFIG.BING_MAP_KEY
+            })
+        });
+        let scene = viewer.scene;
+        let widget = viewer.cesiumWidget;
+        try{
+            let promise = scene.open('http://support.supermap.com.cn:8090/iserver/services/3D-CBD/rest/realspace');
+            Cesium.when(promise,function(layers){
+                scene.camera.setView({
+                    destination : new Cesium.Cartesian3(-2179147.1754770577, 4380398.6133004315, 4092339.895225123),
+                    orientation : {
+                        heading : 0.5500959500406575,
+                        pitch : -0.18431625594320877,
+                        roll : 1.0658141036401503e-14
+                    }
+                });
+let windowWidth = $('body').width(); // window width
+                 let windowHeight = $('body').height(); // window height
+                 let rollerShutterConfig = { // Roller configuration parameters, address transfer in object mode
+                     splitDirection: Cesium.SplitDirection.RIGHT, // initially hides the right side of the roller blind
+                    verticalSplitPosition: windowWidth / 2,
+                    horizontalSplitPosition: windowHeight / 2
+                };
+                initRollerShutter(layers, rollerShutterConfig);
+            },function(e){
+                if (widget._showRenderLoopErrors) {
+                    var title = 'Failed to load SCP. Please check the network connection status or url address is correct?';
+                    widget.showErrorPanel(title, undefined, e);
+                }
+            });
+        }
+        catch(e){
+            if (widget._showRenderLoopErrors) {
+                let title = 'An error occurred while rendering and the rendering has stopped.';
+                widget.showErrorPanel(title, undefined, e);
+            }
+        }
+    }
+    /**
+     * Initialize the roller blind. Set the initial position of the splitter and bind related events.
+     * @param layers Sets the hidden S3M layer through the roller blind.
+     * @param rollerShutterConfig Rolling shutter configuration parameters.
+     */
+    function initRollerShutter(layers, rollerShutterConfig){
+        setRollerShutterSplit(layers, rollerShutterConfig);
+        bindSliderEvt(layers, rollerShutterConfig);
+        $('input[type=radio]').on('input propertychange', function(){
+            let splitDirectionCustomStr = $('input[type=radio]:checked').val();
+            let verticalSlider = document.getElementById('vertical-slider');
+            let horizontalSlider = document.getElementById('horizontal-slider');
+            switch (splitDirectionCustomStr){
+                case 'disable-roller':
+                    verticalSlider.style.display = 'none';
+                    horizontalSlider.style.display = 'none';
+                    rollerShutterConfig.splitDirection = Cesium.SplitDirection.NONE;
+                    break;
+                case 'hide-left':
+                    verticalSlider.style.display = 'block';
+                    horizontalSlider.style.display = 'none';
+                    rollerShutterConfig.splitDirection = Cesium.SplitDirection.LEFT;
+                    break;
+                case 'hide-right':
+                    verticalSlider.style.display = 'block';
+                    horizontalSlider.style.display = 'none';
+                    rollerShutterConfig.splitDirection = Cesium.SplitDirection.RIGHT;
+                    break;
+                case 'hide-top':
+                    verticalSlider.style.display = 'none';
+                    horizontalSlider.style.display = 'block';
+                    rollerShutterConfig.splitDirection = Cesium.SplitDirection.TOP;
+                    break;
+                case 'hide-bottom':
+                    verticalSlider.style.display = 'none';
+                    horizontalSlider.style.display = 'block';
+                    rollerShutterConfig.splitDirection = Cesium.SplitDirection.BOTTOM;
+                    break;
+                default:
+                    break;
+            }
+            setRollerShutterSplit(layers, rollerShutterConfig);
+        });
+    }
+
+    /**
+     * Register the drag and drop event of the roller blind splitter.
+     * @param layers Sets the hidden S3M layer through the roller blind.
+     * @param rollerShutterConfig Rolling shutter configuration parameters.
+     */
+    function bindSliderEvt(layers, rollerShutterConfig){
+        let verticalSlider = document.getElementById('vertical-slider');
+        let horizontalSlider = document.getElementById('horizontal-slider');
+        verticalSlider.addEventListener('mousedown', mouseDown, false);
+        horizontalSlider.addEventListener('mousedown', mouseDown, false);
+        let windowWidth = $('body').width();
+        let windowHeight = $('body').height();
+        document.addEventListener('mouseup', mouseUp, false);
+        function mouseUp(e) {
+            document.removeEventListener('mousemove', sliderMove, false);
+        }
+        function mouseDown(e) {
+            document.addEventListener('mousemove', sliderMove, false);
+        }
+        function sliderMove(e) { // @param rollerShutterConfig Rolling shutter configuration parameters.
+            //Solve the bug of dragging mouse stick
+            if(e.preventDefault){
+                e.preventDefault();
+            }else{
+                e.returnValue = false;
+            }
+            if(rollerShutterConfig.splitDirection === Cesium.SplitDirection.LEFT || rollerShutterConfig.splitDirection === Cesium.SplitDirection.RIGHT){
+                verticalSlider.style.left = e.clientX + 'px';
+                rollerShutterConfig.verticalSplitPosition = e.clientX;
+            }else if(rollerShutterConfig.splitDirection === Cesium.SplitDirection.TOP || rollerShutterConfig.splitDirection === Cesium.SplitDirection.BOTTOM){
+                let clientY = e.clientY;
+                if(clientY < 0){
+                    clientY = 0;
+                }else if(clientY > windowHeight){
+                    clientY = windowHeight - $('#horizontal-slider').height();
+                }
+                horizontalSlider.style.top = clientY + 'px';
+                rollerShutterConfig.horizontalSplitPosition = windowHeight - clientY;
+                console.log(clientY);
+            }
+            setRollerShutterSplit(layers, rollerShutterConfig);
+        }
+    }
+
+    /**
+     * Set the split direction of the roller blind and the position of the split bar.
+     * @param layers Sets the hidden S3M layer through the roller blind.
+     * @param rollerShutterConfig Rolling shutter configuration parameters.
+     */
+    function setRollerShutterSplit(layers, rollerShutterConfig){
+        let splitPosition = null;
+        if(rollerShutterConfig.splitDirection === Cesium.SplitDirection.LEFT || rollerShutterConfig.splitDirection === Cesium.SplitDirection.RIGHT){
+            splitPosition = rollerShutterConfig.verticalSplitPosition;
+
+        }else if(rollerShutterConfig.splitDirection === Cesium.SplitDirection.TOP || rollerShutterConfig.splitDirection === Cesium.SplitDirection.BOTTOM){
+            splitPosition = rollerShutterConfig.horizontalSplitPosition;
+        }
+        for(let layer of layers){
+            layer.splitDirection = rollerShutterConfig.splitDirection;
+
+            if(splitPosition != null){ // It is necessary to set the roller blind split position without disabling the roller blind
+                layer.splitPosition = splitPosition;
+            }
+        }
+    }
+</script>
+</body>
+</html>
